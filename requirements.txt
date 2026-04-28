@@ -1,0 +1,9 @@
+Flask
+Flask-SQLAlchemy
+Flask-Mail
+numpy
+pandas
+scikit-learn
+
+groq
+python-dotenv

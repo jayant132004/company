@@ -1,0 +1,26 @@
+### Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+
+### Virtualenvs
+venv/
+.venv/
+
+### Flask / local state
+instance/
+*.db
+
+### OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+### Misc
+
+
+# Keys
+.env
