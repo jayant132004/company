@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState, useRef, useMemo, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortStore, SortStep } from "../../context/useSortStore";
 import { useAuthStore } from "../../context/useAuthStore";
@@ -17,7 +17,7 @@ import UserDropdown from "../../components/auth/UserDropdown";
 import VisualizerFactory from "./components/visualizers/VisualizerFactory";
 import { ALGO_LAYOUTS } from "./components/visualizers/BaseVisualizer";
 
-const API_BASE = "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 // CS Education Metadata & Pseudocode definitions
 const ALGO_METADATA: Record<string, {
@@ -184,6 +184,38 @@ const ALGO_METADATA: Record<string, {
       "        else: break",
       "      arr[j] = temp"
     ]
+  },
+  tim: {
+    name: "Tim Sort",
+    timeBest: "O(n)",
+    timeAvg: "O(n log n)",
+    timeWorst: "O(n log n)",
+    space: "O(n)",
+    description: "A hybrid sorting algorithm derived from Merge Sort and Insertion Sort. It finds runs of elements that are already sorted, and sorts them further using Insertion Sort, then merges them using Merge Sort.",
+    pseudocode: [
+      "timSort(arr):",
+      "  for i from 0 to n by RUN_SIZE:",
+      "    insertionSort(arr, i, min(i+RUN_SIZE, n))",
+      "  for size = RUN_SIZE; size < n; size = 2*size:",
+      "    for left from 0 to n by 2*size:",
+      "      merge(arr, left, left+size, min(left+2*size, n))"
+    ]
+  },
+  timsort: {
+    name: "Tim Sort",
+    timeBest: "O(n)",
+    timeAvg: "O(n log n)",
+    timeWorst: "O(n log n)",
+    space: "O(n)",
+    description: "A hybrid sorting algorithm derived from Merge Sort and Insertion Sort. It finds runs of elements that are already sorted, and sorts them further using Insertion Sort, then merges them using Merge Sort.",
+    pseudocode: [
+      "timSort(arr):",
+      "  for i from 0 to n by RUN_SIZE:",
+      "    insertionSort(arr, i, min(i+RUN_SIZE, n))",
+      "  for size = RUN_SIZE; size < n; size = 2*size:",
+      "    for left from 0 to n by 2*size:",
+      "      merge(arr, left, left+size, min(left+2*size, n))"
+    ]
   }
 };
 
@@ -288,6 +320,18 @@ const ALGO_LEGENDS: Record<string, Array<{ color: string; label: string }>> = {
     { color: "border-pink-500/50 text-pink-300", label: "Active Gap Group" },
     { color: "bg-amber-400 border-amber-400", label: "Interleaved Compares" },
   ],
+  tim: [
+    { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Active Run Bounds" },
+    { color: "bg-amber-400 border-amber-400", label: "Insertion Compare" },
+    { color: "bg-rose-500 border-rose-500", label: "Insertion Swap/Shift" },
+    { color: "border-indigo-500 bg-indigo-500/10 text-indigo-300", label: "Merge Active" }
+  ],
+  timsort: [
+    { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Active Run Bounds" },
+    { color: "bg-amber-400 border-amber-400", label: "Insertion Compare" },
+    { color: "bg-rose-500 border-rose-500", label: "Insertion Swap/Shift" },
+    { color: "border-indigo-500 bg-indigo-500/10 text-indigo-300", label: "Merge Active" }
+  ],
 };
 
 const getActivePseudocodeLine = (algo: string, eventType: string): number => {
@@ -345,6 +389,13 @@ const getActivePseudocodeLine = (algo: string, eventType: string): number => {
     if (eventType === "comparison" || eventType === "swap") return 5;
     return 0;
   }
+  if (a.includes("tim")) {
+    if (eventType === "timsort_run_start") return 1;
+    if (eventType === "comparison" || eventType === "swap" || eventType === "shift") return 2;
+    if (eventType === "timsort_merge_start") return 4;
+    if (eventType === "merge") return 5;
+    return 0;
+  }
   return 0;
 };
 
@@ -362,9 +413,10 @@ interface Conversation {
   lastUpdated: string;
 }
 
-export default function SortMentor() {
+function SortMentorContent() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuthStore();
+  const searchParams = useSearchParams();
+  const { user, idToken, loading: authLoading, settings } = useAuthStore();
 
   // Zustand State
   const {
@@ -379,6 +431,7 @@ export default function SortMentor() {
   const [arraySize, setArraySize] = useState(12);
   const [presetType, setPresetType] = useState("random");
   const [isLoadingVisuals, setIsLoadingVisuals] = useState(false);
+  const [executionError, setExecutionError] = useState<string | null>(null);
 
   // Visualizer Layout state
   const [zoom, setZoom] = useState<number>(1);
@@ -413,34 +466,14 @@ export default function SortMentor() {
   // Speed mapping (display vs logic delay)
   const displaySpeed = 1550 - speed;
 
-  // Initialize or fetch conversation history from LocalStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("sortmentor_conversations");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as Conversation[];
-          setConversations(parsed);
-          if (parsed.length > 0) {
-            // Find active chat or default to first
-            setActiveChatId(parsed[0].id);
-          } else {
-            createEmptyChat();
-          }
-        } catch (e) {
-          console.error("Failed parsing conversations", e);
-          createEmptyChat();
-        }
-      } else {
-        createEmptyChat();
-      }
-    }
-  }, []);
+  const algoParam = searchParams ? searchParams.get("algorithm") : null;
 
   // Save conversations to LocalStorage
   const saveConversations = (updated: Conversation[]) => {
     setConversations(updated);
-    localStorage.setItem("sortmentor_conversations", JSON.stringify(updated));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sortmentor_conversations", JSON.stringify(updated));
+    }
   };
 
   const createEmptyChat = () => {
@@ -465,84 +498,6 @@ export default function SortMentor() {
   const activeConversation = useMemo(() => {
     return conversations.find(c => c.id === activeChatId);
   }, [conversations, activeChatId]);
-
-  // Auth Protection
-  useEffect(() => {
-    if (!user && !authLoading) {
-      router.push("/");
-    }
-  }, [user, authLoading, router]);
-
-  // Reset viewMode when algorithm changes
-  useEffect(() => {
-    setViewMode("intro");
-  }, [algorithm]);
-
-  // Generate initial dataset when preset/size change
-  useEffect(() => {
-    generateNewArray();
-  }, [arraySize, presetType]);
-
-  // Auto-scroll chat to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConversation?.messages, isTutorThinking]);
-
-  // Synchronous auto-playback step loop
-  useEffect(() => {
-    if (isPlaying) {
-      const runStep = () => {
-        if (!battleMode) {
-          if (currentStepIndex < steps.length - 1) {
-            setCurrentStepIndex(currentStepIndex + 1);
-            playTimerRef.current = setTimeout(runStep, speed);
-          } else {
-            setIsPlaying(false);
-          }
-        } else {
-          const hasMore1 = currentStepIndex < steps.length - 1;
-          const hasMore2 = currentStepIndex2 < steps2.length - 1;
-
-          if (hasMore1 || hasMore2) {
-            if (hasMore1) setCurrentStepIndex(currentStepIndex + 1);
-            if (hasMore2) setCurrentStepIndex2(currentStepIndex2 + 1);
-            playTimerRef.current = setTimeout(runStep, speed);
-          } else {
-            setIsPlaying(false);
-          }
-        }
-      };
-      playTimerRef.current = setTimeout(runStep, speed);
-    } else {
-      if (playTimerRef.current) {
-        clearTimeout(playTimerRef.current);
-      }
-    }
-
-    return () => {
-      if (playTimerRef.current) clearTimeout(playTimerRef.current);
-    };
-  }, [isPlaying, currentStepIndex, currentStepIndex2, steps, steps2, speed, battleMode]);
-
-  const jumpToStep = (idx: number) => {
-    setIsPlaying(false);
-    if (idx >= 0 && idx < steps.length) {
-      setCurrentStepIndex(idx);
-    }
-    if (battleMode && idx >= 0 && idx < steps2.length) {
-      setCurrentStepIndex2(idx);
-    }
-  };
-
-  const handleTimelineMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (steps.length === 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const progress = Math.max(0, Math.min(1, x / rect.width));
-    const stepIdx = Math.round(progress * (steps.length - 1));
-    setHoveredStepIdx(stepIdx);
-    setTooltipX(x);
-  };
 
   // Generation presets helpers
   const generateNewArray = () => {
@@ -596,6 +551,149 @@ export default function SortMentor() {
     setMetrics2(null);
   };
 
+  const jumpToStep = (idx: number) => {
+    setIsPlaying(false);
+    if (idx >= 0 && idx < steps.length) {
+      setCurrentStepIndex(idx);
+    }
+    if (battleMode && idx >= 0 && idx < steps2.length) {
+      setCurrentStepIndex2(idx);
+    }
+  };
+
+  const handleTimelineMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (steps.length === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const progress = Math.max(0, Math.min(1, x / rect.width));
+    const stepIdx = Math.round(progress * (steps.length - 1));
+    setHoveredStepIdx(stepIdx);
+    setTooltipX(x);
+  };
+
+  // --- EFFECT HOOKS ---
+
+  // Handle URL Query Parameter sync (e.g. ?algorithm=quick)
+  useEffect(() => {
+    if (algoParam) {
+      const sanitized = algoParam.replace("-sort", "").toLowerCase();
+      const validAlgos = ["bubble", "selection", "insertion", "merge", "quick", "heap", "counting", "radix", "bucket", "shell", "tim"];
+      if (validAlgos.includes(sanitized)) {
+        setTimeout(() => {
+          setAlgorithm(sanitized);
+          setViewMode("visualizer");
+        }, 0);
+      }
+    }
+  }, [algoParam, setAlgorithm]);
+
+  // Initialize or fetch conversation history from LocalStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("sortmentor_conversations");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Conversation[];
+          setTimeout(() => {
+            setConversations(parsed);
+            if (parsed.length > 0) {
+              // Find active chat or default to first
+              setActiveChatId(parsed[0].id);
+            } else {
+              createEmptyChat();
+            }
+          }, 0);
+        } catch (e) {
+          console.error("Failed parsing conversations", e);
+          setTimeout(() => {
+            createEmptyChat();
+          }, 0);
+        }
+      } else {
+        setTimeout(() => {
+          createEmptyChat();
+        }, 0);
+      }
+    }
+  }, []);
+
+  // Auth Protection
+  useEffect(() => {
+    if (!user && !authLoading) {
+      router.push("/");
+    }
+  }, [user, authLoading, router]);
+
+  // Reset viewMode when algorithm changes
+  useEffect(() => {
+    setTimeout(() => {
+      setViewMode("intro");
+    }, 0);
+  }, [algorithm]);
+
+  // Generate initial dataset when preset/size change
+  useEffect(() => {
+    setTimeout(() => {
+      generateNewArray();
+    }, 0);
+  }, [arraySize, presetType]);
+
+  // Sync default speed settings
+  useEffect(() => {
+    if (settings?.defaultSpeed) {
+      const speedMap: Record<string, number> = {
+        slow: 350,
+        normal: 150,
+        fast: 50
+      };
+      const targetSpeed = speedMap[settings.defaultSpeed];
+      if (targetSpeed !== undefined) {
+        setSpeed(targetSpeed);
+      }
+    }
+  }, [settings?.defaultSpeed, setSpeed]);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeConversation?.messages, isTutorThinking]);
+
+  // Synchronous auto-playback step loop
+  useEffect(() => {
+    if (isPlaying) {
+      const runStep = () => {
+        if (!battleMode) {
+          if (currentStepIndex < steps.length - 1) {
+            setCurrentStepIndex(currentStepIndex + 1);
+            playTimerRef.current = setTimeout(runStep, speed);
+          } else {
+            setIsPlaying(false);
+          }
+        } else {
+          const hasMore1 = currentStepIndex < steps.length - 1;
+          const hasMore2 = currentStepIndex2 < steps2.length - 1;
+
+          if (hasMore1 || hasMore2) {
+            if (hasMore1) setCurrentStepIndex(currentStepIndex + 1);
+            if (hasMore2) setCurrentStepIndex2(currentStepIndex2 + 1);
+            playTimerRef.current = setTimeout(runStep, speed);
+          } else {
+            setIsPlaying(false);
+          }
+        }
+      };
+      playTimerRef.current = setTimeout(runStep, speed);
+    } else {
+      if (playTimerRef.current) {
+        clearTimeout(playTimerRef.current);
+      }
+    }
+
+    return () => {
+      if (playTimerRef.current) clearTimeout(playTimerRef.current);
+    };
+  }, [isPlaying, currentStepIndex, currentStepIndex2, steps, steps2, speed, battleMode]);
+
   const applyCustomArray = () => {
     setValidationError(null);
     const cleaned = customArrayText.replace(/\s+/g, "");
@@ -619,8 +717,8 @@ export default function SortMentor() {
       setValidationError("Maximum array length is 16.");
       return;
     }
-    if (parsed.length < 10) {
-      setValidationError("Minimum array length is 10.");
+    if (parsed.length < 1) {
+      setValidationError("Minimum array length is 1.");
       return;
     }
 
@@ -655,15 +753,25 @@ export default function SortMentor() {
   const startSorting = async () => {
     setIsPlaying(false);
     setIsLoadingVisuals(true);
+    setExecutionError(null);
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (idToken) {
+      headers["Authorization"] = `Bearer ${idToken}`;
+    }
 
     try {
       // 1. Fetch main algorithm steps
       const res = await fetch(`${API_BASE}/sortmentor/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ data: originalArray, algorithm })
       });
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Server error");
+      }
 
       setSteps(data.steps);
       setMetrics(data.metrics);
@@ -673,10 +781,14 @@ export default function SortMentor() {
       if (battleMode) {
         const res2 = await fetch(`${API_BASE}/sortmentor/execute`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ data: originalArray, algorithm: algorithm2 })
         });
         const data2 = await res2.json();
+
+        if (!res2.ok) {
+          throw new Error(data2.detail || "Player 2 execution failed");
+        }
 
         setSteps2(data2.steps);
         setMetrics2(data2.metrics);
@@ -686,6 +798,7 @@ export default function SortMentor() {
       setIsPlaying(true);
     } catch (err) {
       console.error("Sorting execution failed", err);
+      setExecutionError("Connection failed. Please ensure backend sorting engine is active and reachable.");
     } finally {
       setIsLoadingVisuals(false);
     }
@@ -734,6 +847,7 @@ export default function SortMentor() {
       case "Escape":
         e.preventDefault();
         setIsChatOpen(false);
+        setIsExplanationOpen(false);
         break;
     }
   }, [isPlaying, steps, currentStepIndex, currentStepIndex2, battleMode, resetPlayback]);
@@ -783,12 +897,19 @@ export default function SortMentor() {
         comparisons: activeStep?.compare || [],
         swaps: activeStep?.swap || [],
         complexity: `${meta.timeAvg} time, ${meta.space} space`,
-        speed: speed
+        speed: speed,
+        model: settings?.defaultLlm || "Gemini 2.5 Flash",
+        persona: settings?.preferredMentor || "Tutor"
       };
+
+      const requestHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (idToken) {
+        requestHeaders["Authorization"] = `Bearer ${idToken}`;
+      }
 
       const res = await fetch(`${API_BASE}/sortmentor/explain_state`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: requestHeaders,
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -809,9 +930,14 @@ export default function SortMentor() {
 
     setIsTutorThinking(true);
     try {
+      const requestHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (idToken) {
+        requestHeaders["Authorization"] = `Bearer ${idToken}`;
+      }
+
       const res = await fetch(`${API_BASE}/sortmentor/explain_step`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: requestHeaders,
         body: JSON.stringify({
           algorithm,
           event_type: activeStep.event_type,
@@ -965,25 +1091,85 @@ export default function SortMentor() {
         );
       }
 
-      // Inline tags parsing (bold and inline code)
-      const boldParts = part.split("**");
+      // Non-code block: split by lines to handle paragraphs and lists
+      const lines = part.split("\n");
       return (
-        <span key={idx}>
-          {boldParts.map((bPart, bIdx) => {
-            if (bIdx % 2 === 1) {
-              return <strong key={bIdx} className="font-bold text-white bg-white/5 px-1 rounded">{bPart}</strong>;
+        <div key={idx} className="flex flex-col gap-1.5 my-1">
+          {lines.map((line, lIdx) => {
+            const trimmed = line.trim();
+            if (!trimmed) return <div key={lIdx} className="h-1.5" />; // Spacer for empty lines
+
+            // Format bold and inline code in a text segment
+            const formatTextSegment = (txt: string) => {
+              const boldParts = txt.split("**");
+              return boldParts.map((bPart, bIdx) => {
+                if (bIdx % 2 === 1) {
+                  return (
+                    <strong key={bIdx} className="font-bold text-white bg-white/10 px-1 rounded">
+                      {bPart}
+                    </strong>
+                  );
+                }
+                const codeParts = bPart.split("`");
+                return codeParts.map((cPart, cIdx) => {
+                  if (cIdx % 2 === 1) {
+                    return (
+                      <code key={cIdx} className="bg-slate-950 border border-white/10 px-1.5 py-0.5 rounded font-mono text-[10px] text-rose-300">
+                        {cPart}
+                      </code>
+                    );
+                  }
+                  return cPart;
+                });
+              });
+            };
+
+            // Check if it's a heading (e.g. ### Title)
+            if (trimmed.startsWith("#")) {
+              const match = trimmed.match(/^(#{1,6})\s+(.*)$/);
+              if (match) {
+                const level = match[1].length;
+                const content = match[2];
+                const sizeClass = level === 1 
+                  ? "text-sm font-extrabold text-white mt-1.5 mb-0.5 border-b border-white/5 pb-0.5" 
+                  : level === 2 
+                    ? "text-xs font-bold text-white mt-1.5 mb-0.5" 
+                    : "text-xs font-semibold text-indigo-300 mt-1";
+                return (
+                  <div key={lIdx} className={sizeClass}>
+                    {formatTextSegment(content)}
+                  </div>
+                );
+              }
             }
 
-            // Inline code parse `code`
-            const codeParts = bPart.split("`");
-            return codeParts.map((cPart, cIdx) => {
-              if (cIdx % 2 === 1) {
-                return <code key={cIdx} className="bg-slate-900 border border-white/10 px-1 py-0.5 rounded font-mono text-[11px] text-rose-300">{cPart}</code>;
-              }
-              return cPart;
-            });
+            // Check if it is a list item (starts with "-", "*", "+", or a number like "1.")
+            const bulletMatch = trimmed.match(/^([\-\*\+]\s+|[0-9]+\.\s+)(.*)$/);
+            if (bulletMatch) {
+              const prefix = bulletMatch[1];
+              const content = bulletMatch[2];
+              const isNumbered = /^[0-9]/.test(prefix);
+
+              return (
+                <div key={lIdx} className="flex items-start gap-2 pl-2 py-0.5 text-gray-300">
+                  {isNumbered ? (
+                    <span className="font-mono text-indigo-400 font-bold select-none text-[10px] mt-0.5">{prefix}</span>
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
+                  )}
+                  <span className="flex-1 text-xs leading-relaxed">{formatTextSegment(content)}</span>
+                </div>
+              );
+            }
+
+            // Normal text paragraph
+            return (
+              <p key={lIdx} className="text-xs leading-relaxed text-gray-300">
+                {formatTextSegment(line)}
+              </p>
+            );
           })}
-        </span>
+        </div>
       );
     });
   };
@@ -1401,6 +1587,21 @@ export default function SortMentor() {
                               <span>{item.label}</span>
                             </span>
                           ))}
+                        </div>
+                      )}
+
+                      {executionError && (
+                        <div className="mb-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium">
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                            {executionError}
+                          </span>
+                          <button
+                            onClick={startSorting}
+                            className="px-2.5 py-1 rounded bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold cursor-pointer transition-all"
+                          >
+                            Retry
+                          </button>
                         </div>
                       )}
 
@@ -2050,3 +2251,19 @@ export default function SortMentor() {
     </div>
   );
 }
+
+export default function SortMentor() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+          <p className="text-xs text-indigo-300/60 font-semibold tracking-wide animate-pulse">Loading SortMentor Workspace...</p>
+        </div>
+      </div>
+    }>
+      <SortMentorContent />
+    </Suspense>
+  );
+}
+

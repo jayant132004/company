@@ -15,6 +15,7 @@ export default function QuickVisualizer({
   const accentColor = battleId === 2 ? "pink" : "indigo";
 
   // Find the partition range [low, high] for the current step by tracing back
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const partitionRange = useMemo(() => {
     if (currentStepIndex < 0 || steps.length === 0) return null;
     for (let k = currentStepIndex; k >= 0; k--) {

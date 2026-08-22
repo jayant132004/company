@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
     
+    # Security Settings
+    MOCK_AUTH_ENABLED: bool = os.environ.get("MOCK_AUTH_ENABLED", "true").lower() in ("true", "1", "yes")
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

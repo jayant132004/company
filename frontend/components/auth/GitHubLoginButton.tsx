@@ -15,14 +15,15 @@ export default function GitHubLoginButton() {
     setError(null);
     try {
       await loginWithGithub();
-    } catch (err: any) {
-      if (err.code === "auth/popup-blocked") {
+    } catch (err) {
+      const errorObj = err as { code?: string; message?: string };
+      if (errorObj.code === "auth/popup-blocked") {
         setError("Login popup blocked by your browser. Please allow popups and retry.");
-      } else if (err.code === "auth/popup-closed-by-user") {
+      } else if (errorObj.code === "auth/popup-closed-by-user") {
         setError("Login flow cancelled by user.");
-      } else if (err.code === "auth/network-request-failed") {
+      } else if (errorObj.code === "auth/network-request-failed") {
         setError("Network error occurred. Please check your internet connection.");
-      } else if (err.code === "auth/account-exists-with-different-credential") {
+      } else if (errorObj.code === "auth/account-exists-with-different-credential") {
         setError("An account already exists with the same email but different login method.");
       } else {
         setError("GitHub authentication failed. Please try again.");

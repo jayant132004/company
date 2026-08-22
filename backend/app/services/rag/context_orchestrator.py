@@ -61,7 +61,30 @@ def build_tutor_context(payload: Dict[str, Any], query: str, chat_history: str =
     # 3. Load dynamic prompt template
     template = load_prompt_template("tutor.md")
 
-    # 4. Map placeholders
+    # 4. Persona style configuration
+    persona = payload.get("persona", "Tutor")
+    if persona == "Coach":
+        persona_instruction = (
+            "### PERSONA STYLE: RIGOROUS COACH\n"
+            "You must adopt the persona of a rigorous coach. Push the student to think deeper. "
+            "Ask challenging quiz/follow-up questions at the end of your response to test their "
+            "understanding of the sorting mechanics. Focus heavily on algorithm performance."
+        )
+    elif persona == "Examiner":
+        persona_instruction = (
+            "### PERSONA STYLE: FORMAL EXAMINER\n"
+            "You must adopt the persona of a formal examiner. Your tone is formal, objective, "
+            "and analytical. Perform precise interrogative analysis of the code and state, explaining "
+            "exactly how it corresponds to correct execution bounds and invariants."
+        )
+    else:
+        persona_instruction = (
+            "### PERSONA STYLE: ENCOURAGING TUTOR\n"
+            "You must adopt the persona of an encouraging tutor. Be friendly, direct, and explain "
+            "concepts step-by-step using simple analogies."
+        )
+
+    # 5. Map placeholders
     formatted_prompt = template\
         .replace("{{textbook_context}}", textbook_context)\
         .replace("{{algorithm}}", str(algorithm_name))\
@@ -78,6 +101,7 @@ def build_tutor_context(payload: Dict[str, Any], query: str, chat_history: str =
         .replace("{{stack}}", stack)\
         .replace("{{complexity}}", str(complexity))\
         .replace("{{speed}}", f"{speed}")\
+        .replace("{{persona_instruction}}", persona_instruction)\
         .replace("{{chat_history}}", chat_history if chat_history else "No previous conversation history in this session.")
 
     return formatted_prompt

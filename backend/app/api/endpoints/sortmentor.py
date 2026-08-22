@@ -151,6 +151,8 @@ class ExplainStateRequest(BaseModel):
     stack: List[int] = []
     complexity: str = "O(n log n)"
     speed: int = 150
+    model: Optional[str] = "Gemini 2.5 Flash"
+    persona: Optional[str] = "Tutor"
 
 class ExplainStepRequest(BaseModel):
     algorithm: str
@@ -171,8 +173,11 @@ def query_llm(prompt: str, question: str, payload: dict) -> Tuple[str, float, bo
     
     # Try Gemini, then Groq, then fallback
     from app.core.config import settings
+    model_pref = payload.get("model", "Gemini 2.5 Flash")
     try:
-        if settings.GEMINI_API_KEY:
+        if "Groq" in model_pref and settings.GROQ_API_KEY:
+            response_text = call_groq(prompt, question)
+        elif settings.GEMINI_API_KEY:
             response_text = call_gemini(prompt, question)
         elif settings.GROQ_API_KEY:
             response_text = call_groq(prompt, question)
@@ -226,7 +231,7 @@ def explain_state(payload: ExplainStateRequest, current_user: dict = Depends(get
     
     # Log stats for AI observability auditing
     log_ai_transaction({
-        "model": "gemini-1.5-flash" if not cache_hit else "cache",
+        "model": payload.model if not cache_hit else "cache",
         "latency_ms": elapsed_ms,
         "cache_hit": cache_hit,
         "prompt_size": len(prompt),

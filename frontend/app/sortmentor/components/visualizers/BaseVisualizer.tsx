@@ -1,4 +1,5 @@
 import { SortStep } from "../../../../context/useSortStore";
+import { useAuthStore } from "../../../../context/useAuthStore";
 
 export interface VisualizerProps {
   array: number[];
@@ -47,6 +48,8 @@ export const ALGO_LAYOUTS: Record<string, VisualizerLayout> = {
   radix: { preferredWidth: "100%", preferredHeight: 650, explanation: "bottom", aiDrawer: true },
   bucket: { preferredWidth: "100%", preferredHeight: 650, explanation: "bottom", aiDrawer: true },
   shell: { preferredWidth: "100%", preferredHeight: 600, explanation: "bottom", aiDrawer: true },
+  tim: { preferredWidth: "100%", preferredHeight: 700, explanation: "bottom", aiDrawer: true },
+  timsort: { preferredWidth: "100%", preferredHeight: 700, explanation: "bottom", aiDrawer: true },
 };
 
 // Shared Styling Utilities for Visualizers
@@ -64,8 +67,23 @@ export const getBarColorClass = (
   activeStep: SortStep | undefined,
   accentColor: "indigo" | "pink" | "emerald" = "indigo"
 ): string => {
+  // If battle mode player 2, keep pink. Otherwise, use global settings color if it exists.
+  let activeAccent: string = accentColor;
+  if (accentColor !== "pink") {
+    const globalSettings = useAuthStore.getState().settings;
+    if (globalSettings?.accentColor) {
+      activeAccent = globalSettings.accentColor;
+    }
+  }
+
   if (!activeStep) {
-    return accentColor === "pink" ? "bg-pink-500/80" : "bg-indigo-500/80";
+    const colorMap: Record<string, string> = {
+      indigo: "bg-indigo-500/80 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]",
+      pink: "bg-pink-500/80 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]",
+      emerald: "bg-emerald-500/80 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]",
+      violet: "bg-violet-500/80 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]",
+    };
+    return colorMap[activeAccent] || "bg-indigo-500/80";
   }
 
   // Swap Event
@@ -85,7 +103,13 @@ export const getBarColorClass = (
 
   // Sorted / Locked Region
   if (activeStep.locked_indices && activeStep.locked_indices.includes(idx)) {
-    return "bg-emerald-500/80";
+    const sortedColorMap: Record<string, string> = {
+      indigo: "bg-indigo-600/70 border border-indigo-400/30",
+      pink: "bg-pink-600/70 border border-pink-400/30",
+      emerald: "bg-emerald-600/70 border border-emerald-400/30",
+      violet: "bg-violet-600/70 border border-violet-400/30",
+    };
+    return sortedColorMap[activeAccent] || "bg-emerald-500/80";
   }
 
   return "bg-slate-700/50";

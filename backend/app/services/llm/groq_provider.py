@@ -19,7 +19,7 @@ class GroqProvider(BaseLLMProvider):
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": prompt}
                 ],
-                model="llama-3.1-8b-instant",
+                model="groq/compound-mini",
                 temperature=0.3,
                 max_tokens=600
             )

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /dashboard
+
+# Exclude private settings and user dashboard subpages from indexing
+Disallow: /profile
+Disallow: /settings
+
+Sitemap: https://algoverse.io/sitemap.xml

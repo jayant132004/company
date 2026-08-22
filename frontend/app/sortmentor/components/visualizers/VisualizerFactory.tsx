@@ -10,6 +10,7 @@ import CountingVisualizer from "./CountingVisualizer";
 import RadixVisualizer from "./RadixVisualizer";
 import BucketVisualizer from "./BucketVisualizer";
 import ShellVisualizer from "./ShellVisualizer";
+import TimVisualizer from "./TimVisualizer";
 
 interface VisualizerFactoryProps extends VisualizerProps {
   algorithmName: string;
@@ -59,8 +60,12 @@ export default function VisualizerFactory(props: VisualizerFactoryProps) {
     case "shellsort":
       return <ShellVisualizer {...props} />;
     
+    case "tim":
+    case "timsort":
+      return <TimVisualizer {...props} />;
+    
     default:
-      // Fallback to standard Bubble (vertical bars) for other algorithms like TimSort
+      // Fallback to standard Bubble (vertical bars) for other algorithms
       return <BubbleVisualizer {...props} />;
   }
 }

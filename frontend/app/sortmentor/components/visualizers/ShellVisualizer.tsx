@@ -82,7 +82,7 @@ export default function ShellVisualizer({
             const gapColor = getGapGroupColor(idx, currentGap);
             const showNumber = array.length <= 16;
 
-            let finalStyle: React.CSSProperties = { height: heightVal };
+            const finalStyle: React.CSSProperties = { height: heightVal };
             let finalClass = defaultBarColor;
 
             if (!isCompared && !isSwapped && gapColor) {

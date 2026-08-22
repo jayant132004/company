@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 from app.core.firebase import init_firebase
+from app.core.config import settings
 from app.services.user_service import create_user_if_not_exists, update_last_login
 from typing import Optional
 import time
@@ -24,6 +25,12 @@ def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depen
     
     # Enable local mock verification bypass for frontend testing convenience
     if token == "mock_token_value":
+        if not settings.MOCK_AUTH_ENABLED:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Mock authentication is disabled in this environment.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         mock_user = {
             "uid": "guest_student_id",
             "email": "guest@algoverse.io",
@@ -66,7 +73,8 @@ def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials
         
     token = credentials.credentials
     if token == "mock_token_value":
-        return create_user_if_not_exists(mock_guest)
+        if settings.MOCK_AUTH_ENABLED:
+            return create_user_if_not_exists(mock_guest)
         
     try:
         init_firebase()

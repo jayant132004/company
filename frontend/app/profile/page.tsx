@@ -18,7 +18,7 @@ const PRESET_AVATARS = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuthStore();
+  const { user, loading: authLoading, setProfile } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,12 +58,42 @@ export default function ProfilePage() {
             setLanguage(data.language || "Python");
             setFavoriteTopics(data.favoriteTopics || ["Sorting"]);
           } else {
-            // Initial defaults
-            setDisplayName(user.displayName || "");
-            setUsername(user.email ? user.email.split("@")[0] : "");
+            // Check local storage fallback
+            const localStored = localStorage.getItem(`profile_${user.uid}`);
+            if (localStored) {
+              const data = JSON.parse(localStored);
+              setAvatar(data.avatar || "💻");
+              setDisplayName(data.displayName || user.displayName || "");
+              setUsername(data.username || "");
+              setBio(data.bio || "");
+              setLearningGoal(data.learningGoal || "Learn Sorting Basics");
+              setDifficulty(data.difficulty || "intermediate");
+              setLanguage(data.language || "Python");
+              setFavoriteTopics(data.favoriteTopics || ["Sorting"]);
+            } else {
+              setDisplayName(user.displayName || "");
+              setUsername(user.email ? user.email.split("@")[0] : "");
+            }
           }
         } catch (err) {
           console.warn("Firestore offline or permission denied. Using local state fallback.", err);
+          const localStored = localStorage.getItem(`profile_${user.uid}`);
+          if (localStored) {
+            try {
+              const data = JSON.parse(localStored);
+              setAvatar(data.avatar || "💻");
+              setDisplayName(data.displayName || user.displayName || "");
+              setUsername(data.username || "");
+              setBio(data.bio || "");
+              setLearningGoal(data.learningGoal || "Learn Sorting Basics");
+              setDifficulty(data.difficulty || "intermediate");
+              setLanguage(data.language || "Python");
+              setFavoriteTopics(data.favoriteTopics || ["Sorting"]);
+            } catch (e) {}
+          } else {
+            setDisplayName(user.displayName || "");
+            setUsername(user.email ? user.email.split("@")[0] : "");
+          }
         } finally {
           setLoading(false);
         }
@@ -105,12 +135,14 @@ export default function ProfilePage() {
     try {
       const docRef = doc(db, "users", user.uid);
       await setDoc(docRef, profileData, { merge: true });
+      setProfile(profileData);
       setSuccessMsg("Profile updated successfully!");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       console.error("Failed saving profile to Firestore", err);
       // LocalStorage fallback for offline mode
       localStorage.setItem(`profile_${user.uid}`, JSON.stringify(profileData));
+      setProfile(profileData);
       setSuccessMsg("Saved changes locally (Offline Mode).");
       setTimeout(() => setSuccessMsg(null), 3000);
     } finally {

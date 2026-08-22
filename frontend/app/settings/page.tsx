@@ -14,7 +14,7 @@ import UserDropdown from "../../components/auth/UserDropdown";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, loading: authLoading, logout } = useAuthStore();
+  const { user, loading: authLoading, logout, setSettings } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -104,11 +104,13 @@ export default function SettingsPage() {
     try {
       const docRef = doc(db, "users_settings", user.uid);
       await setDoc(docRef, settingsData, { merge: true });
+      setSettings(settingsData);
       setSuccessMsg("Settings saved successfully!");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       // LocalStorage backup
       localStorage.setItem(`settings_${user.uid}`, JSON.stringify(settingsData));
+      setSettings(settingsData);
       setSuccessMsg("Settings saved locally (Offline mode).");
       setTimeout(() => setSuccessMsg(null), 3000);
     } finally {
@@ -228,7 +230,7 @@ export default function SettingsPage() {
                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Accent Color</label>
                 <div className="flex gap-2.5 mt-1">
                   {["indigo", "pink", "violet", "emerald"].map((color) => {
-                    const colorMap: any = {
+                    const colorMap: Record<string, string> = {
                       indigo: "bg-indigo-500 shadow-indigo-500/30",
                       pink: "bg-pink-500 shadow-pink-500/30",
                       violet: "bg-violet-500 shadow-violet-500/30",

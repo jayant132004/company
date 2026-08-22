@@ -15,12 +15,13 @@ export default function GoogleLoginButton() {
     setError(null);
     try {
       await loginWithGoogle();
-    } catch (err: any) {
-      if (err.code === "auth/popup-blocked") {
+    } catch (err) {
+      const errorObj = err as { code?: string; message?: string };
+      if (errorObj.code === "auth/popup-blocked") {
         setError("Login popup blocked by your browser. Please allow popups and retry.");
-      } else if (err.code === "auth/popup-closed-by-user") {
+      } else if (errorObj.code === "auth/popup-closed-by-user") {
         setError("Login flow cancelled by user.");
-      } else if (err.code === "auth/network-request-failed") {
+      } else if (errorObj.code === "auth/network-request-failed") {
         setError("Network error occurred. Please check your internet connection.");
       } else {
         setError("Google authentication failed. Please try again.");

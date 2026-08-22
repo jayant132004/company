@@ -9,7 +9,7 @@ import LogoutButton from "./LogoutButton";
 import { LayoutDashboard, Settings, User as UserIcon, ChevronDown } from "lucide-react";
 
 export default function UserDropdown() {
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ export default function UserDropdown() {
 
   if (!user) return null;
 
-  const displayName = user.displayName || "AlgoVerse Student";
+  const displayName = profile?.displayName || user.displayName || "AlgoVerse Student";
   const email = user.email || "";
 
   return (
