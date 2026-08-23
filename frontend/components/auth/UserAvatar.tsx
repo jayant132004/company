@@ -32,9 +32,18 @@ export default function UserAvatar({ size = "md" }: UserAvatarProps) {
     lg: "text-2xl"
   };
   
+  const isImageAvatar = profile?.avatar && (profile.avatar.startsWith("data:image/") || profile.avatar.startsWith("http"));
+
   return (
     <div className={`relative flex items-center justify-center rounded-full overflow-hidden border border-white/10 bg-slate-900/80 shadow-inner ${sizeClasses[size]}`}>
-      {profile?.avatar ? (
+      {isImageAvatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={profile.avatar}
+          alt={displayName}
+          className="h-full w-full object-cover"
+        />
+      ) : profile?.avatar ? (
         <span className={`${avatarEmojiSizeClasses[size]} select-none`}>{profile.avatar}</span>
       ) : user.photoURL ? (
         // eslint-disable-next-line @next/next/no-img-element

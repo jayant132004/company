@@ -10,6 +10,7 @@ import {
   Info, Terminal, BookOpen, Loader2, Play, RotateCcw, Activity
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
+import ShareButton from "../../components/ui/ShareButton";
 
 interface AlgorithmData {
   id: string;
@@ -299,7 +300,8 @@ export default function Dashboard() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ShareButton />
           <UserDropdown />
         </div>
       </header>

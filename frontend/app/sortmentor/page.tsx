@@ -14,6 +14,7 @@ import {
   ZoomIn, ZoomOut
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
+import ShareButton from "../../components/ui/ShareButton";
 import VisualizerFactory from "./components/visualizers/VisualizerFactory";
 import { ALGO_LAYOUTS } from "./components/visualizers/BaseVisualizer";
 
@@ -1228,7 +1229,7 @@ function SortMentorContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setBattleMode(!battleMode)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-xs transition-all cursor-pointer border ${
@@ -1240,6 +1241,7 @@ function SortMentorContent() {
             <Swords className="h-4 w-4" />
             Battle Arena {battleMode ? "Active" : "OFF"}
           </button>
+          <ShareButton />
           <UserDropdown />
         </div>
       </header>

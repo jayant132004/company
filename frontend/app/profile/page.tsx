@@ -103,6 +103,25 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size limit (max 1.5MB for Base64 storage)
+    if (file.size > 1.5 * 1024 * 1024) {
+      alert("Image is too large. Please select an image under 1.5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const toggleTopic = (topic: string) => {
     if (favoriteTopics.includes(topic)) {
       setFavoriteTopics(favoriteTopics.filter(t => t !== topic));
@@ -196,11 +215,22 @@ export default function ProfilePage() {
             <div className="glass-card p-6 flex flex-col items-center text-center gap-4">
               
               {/* Profile Avatar Glow Circle */}
-              <div className="relative flex items-center justify-center h-28 w-28 rounded-full bg-slate-950 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
-                <span className="text-5xl">{avatar}</span>
-                <div className="absolute bottom-0 right-0 p-1.5 rounded-full bg-indigo-600 text-white border border-slate-950">
+              <div className="relative overflow-hidden flex items-center justify-center h-28 w-28 rounded-full bg-slate-950 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                {avatar.startsWith("data:image/") || avatar.startsWith("http") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-5xl">{avatar}</span>
+                )}
+                <label className="absolute bottom-0 right-0 p-1.5 rounded-full bg-indigo-600 text-white border border-slate-950 cursor-pointer hover:bg-indigo-500 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
                   <Image className="h-4.5 w-4.5" />
-                </div>
+                </label>
               </div>
 
               {/* Display Name and email */}
