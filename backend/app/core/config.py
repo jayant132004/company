@@ -8,8 +8,11 @@ class Settings(BaseSettings):
     
     # CORS Origins (Next.js client)
     CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        origin.strip() for origin in os.environ.get(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000,https://algoverse-flame.vercel.app"
+        ).split(",")
+        if origin.strip()
     ]
     
     # Firebase settings
