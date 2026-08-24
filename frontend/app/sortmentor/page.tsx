@@ -1755,6 +1755,7 @@ function SortMentorContent() {
               )}
 
             </div>
+          </div>
 
             {/* Combined Playback Control Bar & Timeline (Priority 2 & 3) */}
             <div className="glass-panel p-4 rounded-xl flex flex-col gap-3 shrink-0 mt-4">
