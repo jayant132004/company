@@ -1268,10 +1268,7 @@ function SortMentorContent() {
       <div className="flex-1 flex overflow-hidden relative">
         
         {/* Left Side Workspace (Visualizer & Controls) */}
-        <div className="flex-1 flex flex-col lg:flex-row p-6 gap-6 min-w-0 h-full overflow-hidden">
-          
-          {/* Main Visualizer Area */}
-          <div className="w-full lg:w-[65%] flex flex-col gap-4 overflow-y-auto h-full min-w-0 pr-1 shrink-0">
+        <div className="flex-1 flex flex-col p-6 gap-4 overflow-y-auto min-w-0 h-full">
           
           {/* Compact Settings Summary Row when collapsed */}
           <AnimatePresence initial={false}>
@@ -1914,150 +1911,149 @@ function SortMentorContent() {
 
             </div>
 
-          </div>
-
-          {/* Sticky Side Explanation Hub */}
-          {isExplanationOpen && !battleMode && !isFullscreen && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="w-full lg:w-[35%] flex flex-col glass-panel p-5 border border-white/5 rounded-2xl h-full min-w-[320px] max-w-[440px] overflow-y-auto shrink-0 bg-slate-900/40 gap-4 relative"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setIsExplanationOpen(false)}
-                className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-500 hover:text-white transition-all cursor-pointer z-10"
-                title="Close Explanation Hub"
+          {/* Explanation & Pseudocode Panel (Priority 9 / Collapsible Bottom Drawer) */}
+          <AnimatePresence>
+            {isExplanationOpen && !battleMode && !isFullscreen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col gap-4 shrink-0 overflow-hidden relative"
               >
-                <X className="h-4 w-4" />
-              </button>
+                {/* Close Button */}
+                <button
+                  onClick={() => setIsExplanationOpen(false)}
+                  className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-500 hover:text-white transition-all cursor-pointer z-10"
+                  title="Close Explanation Hub"
+                >
+                  <X className="h-4 w-4" />
+                </button>
 
-              <div className="flex flex-col gap-1 border-b border-white/5 pb-2 shrink-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white font-mono uppercase font-semibold">Explanation Hub</span>
-                  <span className="text-[10px] font-semibold text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/10 font-mono">
-                    Step {currentStepIndex + 1} / {steps.length}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-400 font-mono uppercase tracking-tight mt-1 gap-2">
-                  <span>
-                    Complexity: <span className="text-indigo-300 font-bold">Time {ALGO_METADATA[algorithm]?.timeAvg || "O(n²)"}</span> | <span className="text-emerald-300 font-bold">Space {ALGO_METADATA[algorithm]?.space || "O(1)"}</span>
-                  </span>
-                  
-                  {/* Live SVG Complexity Sparkline */}
-                  {steps.length > 0 && (
-                    <div className="flex items-center gap-2 bg-slate-950/60 px-2 py-0.5 rounded border border-white/5" title="Live operation progress compared to theoretical curve">
-                      <span className="text-[8px] text-gray-500 font-bold font-sans">Growth:</span>
-                      <svg width="80" height="16" className="overflow-visible select-none">
-                        {/* Draw base curve */}
-                        <path
-                          d={
-                            ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                              ? "M 0,16 Q 40,16 80,2"
-                              : ["merge", "quick", "heap", "timsort"].includes(algorithm.toLowerCase())
-                                ? "M 0,16 C 30,12 50,6 80,2"
-                                : "M 0,16 L 80,2"
-                          }
-                          fill="none"
-                          stroke="rgba(99, 102, 241, 0.25)"
-                          strokeWidth="1.5"
-                        />
-                        {/* Draw progress curve path */}
-                        <path
-                          d={
-                            ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                              ? `M 0,16 Q ${40 * (currentStepIndex / (steps.length - 1 || 1))} ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))} ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))}`
-                              : `M 0,16 L ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * (currentStepIndex / (steps.length - 1 || 1)))}`
-                          }
-                          fill="none"
-                          stroke="rgba(99, 102, 241, 0.85)"
-                          strokeWidth="2"
-                          className="transition-all duration-300"
-                        />
-                        {/* Tracer Dot */}
-                        <circle
-                          cx={80 * (currentStepIndex / (steps.length - 1 || 1))}
-                          cy={
-                            16 - (
+                <div className="flex flex-col gap-1 border-b border-white/5 pb-2 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white font-mono uppercase font-semibold">Explanation Hub</span>
+                    <span className="text-[10px] font-semibold text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/10 font-mono">
+                      Step {currentStepIndex + 1} / {steps.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-400 font-mono uppercase tracking-tight mt-1 gap-2">
+                    <span>
+                      Complexity: <span className="text-indigo-300 font-bold">Time {ALGO_METADATA[algorithm]?.timeAvg || "O(n²)"}</span> | <span className="text-emerald-300 font-bold">Space {ALGO_METADATA[algorithm]?.space || "O(1)"}</span>
+                    </span>
+                    
+                    {/* Live SVG Complexity Sparkline */}
+                    {steps.length > 0 && (
+                      <div className="flex items-center gap-2 bg-slate-950/60 px-2 py-0.5 rounded border border-white/5" title="Live operation progress compared to theoretical curve">
+                        <span className="text-[8px] text-gray-500 font-bold font-sans">Growth:</span>
+                        <svg width="80" height="16" className="overflow-visible select-none">
+                          {/* Draw base curve */}
+                          <path
+                            d={
                               ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                                ? Math.pow(currentStepIndex / (steps.length - 1 || 1), 2) * 14
-                                : (currentStepIndex / (steps.length - 1 || 1)) * 14
-                            )
-                          }
-                          r="2.5"
-                          className="fill-indigo-400 shadow shadow-indigo-500/50 transition-all duration-300"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex-grow flex flex-col gap-4 min-h-0 overflow-y-auto pt-1 pr-1 text-[11px] leading-relaxed">
-                
-                {/* Action Description */}
-                <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5 shrink-0">
-                  <span className="font-bold text-[9px] uppercase tracking-wider text-indigo-400 font-mono block">Current Action</span>
-                  <p className="text-gray-300 font-medium">
-                    {steps[currentStepIndex]?.message || "No sorting operations running. Custom array loaded."}
-                  </p>
-                </div>
-
-                {/* State variables */}
-                <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5 font-mono text-[10px] shrink-0">
-                  <span className="font-bold text-[9px] uppercase tracking-wider text-rose-400 font-mono block">State Variables</span>
-                  {steps[currentStepIndex] ? (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Event:</span><span className="text-white uppercase font-bold">{steps[currentStepIndex].event_type}</span></div>
-                      <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Comparisons:</span><span className="text-amber-400 font-bold">{steps[currentStepIndex].compare?.join(', ') || 'None'}</span></div>
-                      <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Swaps:</span><span className="text-rose-400 font-bold">{steps[currentStepIndex].swap?.join(', ') || 'None'}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">Pivot:</span><span className="text-cyan-400 font-bold">{steps[currentStepIndex].pivot !== undefined ? steps[currentStepIndex].pivot : 'None'}</span></div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-600">No active state variables</span>
-                  )}
-                </div>
-
-                {/* Pseudocode Panel */}
-                <div className="flex flex-col gap-1.5 bg-slate-950/40 rounded-xl p-3.5 border border-white/5 flex-grow min-h-[140px]">
-                  <span className="font-bold text-[9px] uppercase tracking-wider text-emerald-400 font-mono block shrink-0">Algorithm Pseudocode</span>
-                  <div className="flex flex-col gap-0.5 select-none overflow-y-auto flex-grow">
-                    {(ALGO_METADATA[algorithm]?.pseudocode || ALGO_METADATA.bubble.pseudocode).map((line, lineIdx) => {
-                      const activeLine = getActivePseudocodeLine(algorithm, steps[currentStepIndex]?.event_type || "");
-                      const isHighlighted = activeLine === lineIdx;
-                      return (
-                        <div
-                          key={lineIdx}
-                          className={`px-2 py-0.5 font-mono text-[9px] rounded transition-all whitespace-pre ${
-                            isHighlighted
-                              ? "bg-indigo-500/20 border-l-2 border-indigo-500 text-indigo-200 font-bold"
-                              : "text-gray-500 font-medium"
-                          }`}
-                        >
-                          {line}
-                        </div>
-                      );
-                    })}
+                                ? "M 0,16 Q 40,16 80,2"
+                                : ["merge", "quick", "heap", "timsort"].includes(algorithm.toLowerCase())
+                                  ? "M 0,16 C 30,12 50,6 80,2"
+                                  : "M 0,16 L 80,2"
+                            }
+                            fill="none"
+                            stroke="rgba(99, 102, 241, 0.25)"
+                            strokeWidth="1.5"
+                          />
+                          {/* Draw progress curve path */}
+                          <path
+                            d={
+                              ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
+                                ? `M 0,16 Q ${40 * (currentStepIndex / (steps.length - 1 || 1))} ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))} ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))}`
+                                : `M 0,16 L ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * (currentStepIndex / (steps.length - 1 || 1)))}`
+                            }
+                            fill="none"
+                            stroke="rgba(99, 102, 241, 0.85)"
+                            strokeWidth="2"
+                            className="transition-all duration-300"
+                          />
+                          {/* Tracer Dot */}
+                          <circle
+                            cx={80 * (currentStepIndex / (steps.length - 1 || 1))}
+                            cy={
+                              16 - (
+                                ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
+                                  ? Math.pow(currentStepIndex / (steps.length - 1 || 1), 2) * 14
+                                  : (currentStepIndex / (steps.length - 1 || 1)) * 14
+                              )
+                            }
+                            r="2.5"
+                            className="fill-indigo-400 shadow shadow-indigo-500/50 transition-all duration-300"
+                          />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Explain Current Step trigger */}
-              <div className="flex justify-end pt-2 border-t border-white/5 shrink-0">
-                <button
-                  onClick={explainCurrentStep}
-                  disabled={steps.length === 0}
-                  className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-semibold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(99,102,241,0.2)] w-full justify-center"
-                >
-                  <BrainCircuit className="h-3.5 w-3.5" />
-                  Ask AI to Explain Step
-                </button>
-              </div>
-            </motion.div>
-          )}
+                <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 min-h-0 overflow-y-auto pt-1 pr-1 text-[11px] leading-relaxed">
+                  {/* Action Description */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5">
+                    <span className="font-bold text-[9px] uppercase tracking-wider text-indigo-400 font-mono block">Current Action</span>
+                    <p className="text-gray-300 font-medium">
+                      {steps[currentStepIndex]?.message || "No sorting operations running. Custom array loaded."}
+                    </p>
+                  </div>
 
-          </div>
+                  {/* State variables */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5 font-mono text-[10px]">
+                    <span className="font-bold text-[9px] uppercase tracking-wider text-rose-400 font-mono block">State Variables</span>
+                    {steps[currentStepIndex] ? (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Event:</span><span className="text-white uppercase font-bold">{steps[currentStepIndex].event_type}</span></div>
+                        <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Comparisons:</span><span className="text-amber-400 font-bold">{steps[currentStepIndex].compare?.join(', ') || 'None'}</span></div>
+                        <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Swaps:</span><span className="text-rose-400 font-bold">{steps[currentStepIndex].swap?.join(', ') || 'None'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Pivot:</span><span className="text-cyan-400 font-bold">{steps[currentStepIndex].pivot !== undefined ? steps[currentStepIndex].pivot : 'None'}</span></div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-600">No active state variables</span>
+                    )}
+                  </div>
+
+                  {/* Pseudocode Panel */}
+                  <div className="flex flex-col gap-1.5 bg-slate-950/40 rounded-xl p-3.5 border border-white/5 min-h-[140px]">
+                    <span className="font-bold text-[9px] uppercase tracking-wider text-emerald-400 font-mono block shrink-0">Algorithm Pseudocode</span>
+                    <div className="flex flex-col gap-0.5 select-none overflow-y-auto flex-1 max-h-[140px]">
+                      {(ALGO_METADATA[algorithm]?.pseudocode || ALGO_METADATA.bubble.pseudocode).map((line, lineIdx) => {
+                        const activeLine = getActivePseudocodeLine(algorithm, steps[currentStepIndex]?.event_type || "");
+                        const isHighlighted = activeLine === lineIdx;
+                        return (
+                          <div
+                            key={lineIdx}
+                            className={`px-2 py-0.5 font-mono text-[9px] rounded transition-all whitespace-pre ${
+                              isHighlighted
+                                ? "bg-indigo-500/20 border-l-2 border-indigo-500 text-indigo-200 font-bold"
+                                : "text-gray-500 font-medium"
+                            }`}
+                          >
+                            {line}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Explain Current Step trigger */}
+                <div className="flex justify-end pt-2 border-t border-white/5 shrink-0">
+                  <button
+                    onClick={explainCurrentStep}
+                    disabled={steps.length === 0}
+                    className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-semibold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(99,102,241,0.2)]"
+                  >
+                    <BrainCircuit className="h-3.5 w-3.5" />
+                    Ask AI to Explain Step
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+        </div>
 
         <AnimatePresence>
           {isChatOpen && !isFullscreen && (
