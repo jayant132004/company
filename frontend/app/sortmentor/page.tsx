@@ -1271,7 +1271,7 @@ function SortMentorContent() {
         <div className="flex-1 flex flex-col lg:flex-row p-6 gap-6 min-w-0 h-full overflow-hidden">
           
           {/* Main Visualizer Area */}
-          <div className="flex-1 lg:flex-[3] flex flex-col gap-4 overflow-y-auto h-full min-w-0 pr-1">
+          <div className="w-full lg:w-[65%] flex flex-col gap-4 overflow-y-auto h-full min-w-0 pr-1 shrink-0">
           
           {/* Compact Settings Summary Row when collapsed */}
           <AnimatePresence initial={false}>
@@ -1919,9 +1919,9 @@ function SortMentorContent() {
           {/* Sticky Side Explanation Hub */}
           {isExplanationOpen && !battleMode && !isFullscreen && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "35%", opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
               className="w-full lg:w-[35%] flex flex-col glass-panel p-5 border border-white/5 rounded-2xl h-full min-w-[320px] max-w-[440px] overflow-y-auto shrink-0 bg-slate-900/40 gap-4 relative"
             >
               {/* Close Button */}
@@ -2058,8 +2058,6 @@ function SortMentorContent() {
           )}
 
           </div>
-
-        </div>
 
         <AnimatePresence>
           {isChatOpen && !isFullscreen && (
