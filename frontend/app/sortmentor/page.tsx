@@ -1224,6 +1224,10 @@ function SortMentorContent() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-3">
+            <div className="relative overflow-hidden flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-slate-950">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-icon.png" alt="AlgoVerse" className="h-full w-full object-cover scale-110" />
+            </div>
             <span className="font-bold text-lg text-white">SortMentor</span>
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">AlgoVerse Engine</span>
           </div>

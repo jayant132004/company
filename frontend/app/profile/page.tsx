@@ -192,8 +192,9 @@ export default function ProfilePage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
-              <BrainCircuit className="h-6 w-6" />
+            <div className="relative overflow-hidden flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 shadow-[0_0_10px_rgba(99,102,241,0.15)] bg-slate-950">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-icon.png" alt="AlgoVerse" className="h-full w-full object-cover scale-110" />
             </div>
             <span className="font-bold text-xl tracking-tight text-white">
               AlgoVerse <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 ml-2">Profile</span>

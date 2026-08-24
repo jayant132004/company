@@ -72,8 +72,9 @@ function LoginContent() {
       >
         {/* AlgoVerse Header */}
         <div className="flex flex-col items-center gap-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <BrainCircuit className="h-6 w-6" />
+          <div className="relative overflow-hidden flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(99,102,241,0.2)] bg-slate-950">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-icon.png" alt="AlgoVerse" className="h-full w-full object-cover scale-110" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white mt-2">
             Algo<span className="bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">Verse</span>
