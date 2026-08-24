@@ -1260,6 +1260,16 @@ function SortMentorContent() {
             Battle Arena {battleMode ? "Active" : "OFF"}
           </button>
           <ShareButton />
+          {!isChatOpen && (
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-xs transition-all cursor-pointer border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 hover:text-indigo-200"
+              title="Open AI Tutor"
+            >
+              <GraduationCap className="h-4 w-4" />
+              AI Tutor
+            </button>
+          )}
           <UserDropdown />
         </div>
       </header>
@@ -1271,7 +1281,7 @@ function SortMentorContent() {
         <div className="flex-1 flex flex-col lg:flex-row p-6 gap-6 min-w-0 h-full overflow-hidden">
           
           {/* Main Visualizer Area */}
-          <div className="w-full lg:w-[65%] flex flex-col gap-4 overflow-y-auto h-full min-w-0 pr-1 shrink-0">
+          <div className="w-full lg:w-[70%] flex flex-col h-auto lg:h-full min-w-0 lg:pr-2 overflow-y-auto lg:overflow-hidden shrink-0">
           
           {/* Compact Settings Summary Row when collapsed */}
           <AnimatePresence initial={false}>
@@ -1467,14 +1477,12 @@ function SortMentorContent() {
               {/* Visualizer 1 */}
               <div
                 ref={visualizerCardRef}
-                className={`glass-card p-5 flex flex-col relative justify-between transition-all w-full ${
+                className={`glass-card p-5 flex flex-col relative justify-between transition-all w-full flex-grow min-h-[350px] lg:min-h-0 lg:flex-1 ${
                   isFullscreen 
                     ? "fixed inset-4 z-50 bg-slate-950/95 border-indigo-500/30" 
                     : ""
                 }`}
-                style={{
-                  minHeight: isFullscreen ? "100%" : `${ALGO_LAYOUTS[algorithm]?.preferredHeight || 600}px`
-                }}
+                style={isFullscreen ? { minHeight: "100%" } : {}}
               >
                 
                 {/* Header metrics */}
@@ -1545,7 +1553,7 @@ function SortMentorContent() {
                 </div>
 
                 {/* Specialized Visualizer Integration */}
-                <div className="flex-grow min-h-0 flex flex-col justify-end relative overflow-hidden py-2">
+                <div className="flex-grow min-h-0 flex flex-col justify-end relative overflow-auto py-2">
                   {viewMode === "intro" && !battleMode ? (
                     <div className="flex-grow flex flex-col justify-center items-center text-center p-6 gap-5 max-w-2xl mx-auto h-full min-h-[300px]">
                       <div className="flex flex-col gap-2">
@@ -1680,10 +1688,8 @@ function SortMentorContent() {
               {/* Visualizer 2 (Battle Arena) */}
               {battleMode && (
                 <div 
-                  className="glass-card p-5 flex flex-col relative justify-between border-t-2 border-t-pink-500 xl:border-t-0 xl:border-l-2 xl:border-l-pink-500"
-                  style={{
-                    minHeight: isFullscreen ? "100%" : `${ALGO_LAYOUTS[algorithm2]?.preferredHeight || 600}px`
-                  }}
+                  className="glass-card p-5 flex flex-col relative justify-between border-t-2 border-t-pink-500 xl:border-t-0 xl:border-l-2 xl:border-l-pink-500 flex-grow min-h-[350px] lg:min-h-0 lg:flex-1"
+                  style={isFullscreen ? { minHeight: "100%" } : {}}
                 >
                   
                   {/* Header metrics 2 */}
@@ -1711,7 +1717,7 @@ function SortMentorContent() {
                   </div>
 
                   {/* Visualizer 2 Integration */}
-                  <div className="flex-grow min-h-0 flex flex-col justify-end relative overflow-hidden py-2">
+                  <div className="flex-grow min-h-0 flex flex-col justify-end relative overflow-auto py-2">
                     {/* Context-Aware Color Legend 2 */}
                     {ALGO_LEGENDS[algorithm2.toLowerCase()] && (
                       <div className="flex flex-wrap items-center gap-3 py-1.5 px-3 rounded-lg bg-slate-950/20 border border-white/5 text-[9px] font-mono text-gray-400 mb-2 shrink-0 select-none">
@@ -1922,7 +1928,7 @@ function SortMentorContent() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="w-full lg:w-[35%] flex flex-col glass-panel p-5 border border-white/5 rounded-2xl h-full min-w-[320px] max-w-[440px] overflow-y-auto shrink-0 bg-slate-900/40 gap-4 relative"
+              className="w-full lg:w-[30%] flex flex-col glass-panel p-5 border border-white/5 rounded-2xl h-auto lg:h-full min-w-[320px] max-w-[440px] overflow-y-auto shrink-0 bg-slate-900/40 gap-4 relative"
             >
               {/* Close Button */}
               <button
@@ -1935,93 +1941,25 @@ function SortMentorContent() {
 
               <div className="flex flex-col gap-1 border-b border-white/5 pb-2 shrink-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white font-mono uppercase font-semibold">Explanation Hub</span>
+                  <span className="text-xs font-bold text-white font-mono uppercase">Explanation Hub</span>
                   <span className="text-[10px] font-semibold text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/10 font-mono">
                     Step {currentStepIndex + 1} / {steps.length}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-400 font-mono uppercase tracking-tight mt-1 gap-2">
-                  <span>
-                    Complexity: <span className="text-indigo-300 font-bold">Time {ALGO_METADATA[algorithm]?.timeAvg || "O(n²)"}</span> | <span className="text-emerald-300 font-bold">Space {ALGO_METADATA[algorithm]?.space || "O(1)"}</span>
-                  </span>
-                  
-                  {/* Live SVG Complexity Sparkline */}
-                  {steps.length > 0 && (
-                    <div className="flex items-center gap-2 bg-slate-950/60 px-2 py-0.5 rounded border border-white/5" title="Live operation progress compared to theoretical curve">
-                      <span className="text-[8px] text-gray-500 font-bold font-sans">Growth:</span>
-                      <svg width="80" height="16" className="overflow-visible select-none">
-                        {/* Draw base curve */}
-                        <path
-                          d={
-                            ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                              ? "M 0,16 Q 40,16 80,2"
-                              : ["merge", "quick", "heap", "timsort"].includes(algorithm.toLowerCase())
-                                ? "M 0,16 C 30,12 50,6 80,2"
-                                : "M 0,16 L 80,2"
-                          }
-                          fill="none"
-                          stroke="rgba(99, 102, 241, 0.25)"
-                          strokeWidth="1.5"
-                        />
-                        {/* Draw progress curve path */}
-                        <path
-                          d={
-                            ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                              ? `M 0,16 Q ${40 * (currentStepIndex / (steps.length - 1 || 1))} ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))} ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))}`
-                              : `M 0,16 L ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * (currentStepIndex / (steps.length - 1 || 1)))}`
-                          }
-                          fill="none"
-                          stroke="rgba(99, 102, 241, 0.85)"
-                          strokeWidth="2"
-                          className="transition-all duration-300"
-                        />
-                        {/* Tracer Dot */}
-                        <circle
-                          cx={80 * (currentStepIndex / (steps.length - 1 || 1))}
-                          cy={
-                            16 - (
-                              ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                                ? Math.pow(currentStepIndex / (steps.length - 1 || 1), 2) * 14
-                                : (currentStepIndex / (steps.length - 1 || 1)) * 14
-                            )
-                          }
-                          r="2.5"
-                          className="fill-indigo-400 shadow shadow-indigo-500/50 transition-all duration-300"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="flex-grow flex flex-col gap-4 min-h-0 overflow-y-auto pt-1 pr-1 text-[11px] leading-relaxed">
-                
-                {/* Action Description */}
+                {/* Explanation */}
                 <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5 shrink-0">
-                  <span className="font-bold text-[9px] uppercase tracking-wider text-indigo-400 font-mono block">Current Action</span>
+                  <span className="font-bold text-[9px] uppercase tracking-wider text-indigo-400 font-mono block">Explanation</span>
                   <p className="text-gray-300 font-medium">
                     {steps[currentStepIndex]?.message || "No sorting operations running. Custom array loaded."}
                   </p>
                 </div>
 
-                {/* State variables */}
-                <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5 font-mono text-[10px] shrink-0">
-                  <span className="font-bold text-[9px] uppercase tracking-wider text-rose-400 font-mono block">State Variables</span>
-                  {steps[currentStepIndex] ? (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Event:</span><span className="text-white uppercase font-bold">{steps[currentStepIndex].event_type}</span></div>
-                      <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Comparisons:</span><span className="text-amber-400 font-bold">{steps[currentStepIndex].compare?.join(', ') || 'None'}</span></div>
-                      <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Swaps:</span><span className="text-rose-400 font-bold">{steps[currentStepIndex].swap?.join(', ') || 'None'}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">Pivot:</span><span className="text-cyan-400 font-bold">{steps[currentStepIndex].pivot !== undefined ? steps[currentStepIndex].pivot : 'None'}</span></div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-600">No active state variables</span>
-                  )}
-                </div>
-
                 {/* Pseudocode Panel */}
-                <div className="flex flex-col gap-1.5 bg-slate-950/40 rounded-xl p-3.5 border border-white/5 flex-grow min-h-[140px]">
-                  <span className="font-bold text-[9px] uppercase tracking-wider text-emerald-400 font-mono block shrink-0">Algorithm Pseudocode</span>
+                <div className="flex flex-col gap-1.5 bg-slate-950/40 rounded-xl p-3.5 border border-white/5 flex-grow min-h-[220px]">
+                  <span className="font-bold text-[9px] uppercase tracking-wider text-emerald-400 font-mono block shrink-0">Pseudocode</span>
                   <div className="flex flex-col gap-0.5 select-none overflow-y-auto flex-grow">
                     {(ALGO_METADATA[algorithm]?.pseudocode || ALGO_METADATA.bubble.pseudocode).map((line, lineIdx) => {
                       const activeLine = getActivePseudocodeLine(algorithm, steps[currentStepIndex]?.event_type || "");
@@ -2267,17 +2205,6 @@ function SortMentorContent() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Collapsed Chat Toggle Button */}
-        {!isChatOpen && (
-          <button
-            onClick={() => setIsChatOpen(true)}
-            className="absolute right-4 top-4 p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/30 z-10 transition-all cursor-pointer"
-            title="Open AI Tutor"
-          >
-            <GraduationCap className="h-5 w-5" />
-          </button>
-        )}
 
       </div>
     </div>
