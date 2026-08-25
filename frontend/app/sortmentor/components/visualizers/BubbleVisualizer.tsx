@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { VisualizerProps, getNormalizedHeight, getBarColorClass } from "./BaseVisualizer";
+import { VisualizerProps, getNormalizedHeight, getBarColorClass, getNumberFontSizeClass } from "./BaseVisualizer";
 
 export default function BubbleVisualizer({
   array,
@@ -12,32 +12,38 @@ export default function BubbleVisualizer({
 }: VisualizerProps) {
   const activeStep = steps[currentStepIndex];
   const accentColor = battleId === 2 ? "pink" : "indigo";
+  const numFont = getNumberFontSizeClass(array.length);
 
   return (
     <div 
-      className="w-full h-full flex flex-col justify-between min-h-0"
+      className="w-full h-full flex flex-col justify-between min-h-0 relative overflow-hidden"
       style={{ transform: `scale(${zoom})`, transformOrigin: "bottom center" }}
     >
       {/* Array Bars Grid */}
-      <div className="flex-1 flex items-end justify-between gap-[2px] border-b border-white/5 pb-2 relative min-h-0 select-none overflow-hidden">
+      <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 border-b border-white/5 pb-2 relative min-h-0 select-none px-2 pt-6">
         {array.map((val, idx) => {
           const heightVal = getNormalizedHeight(val, originalArray);
           const barClass = getBarColorClass(idx, activeStep, accentColor);
-          const showNumber = array.length <= 16;
+          const isCompared = activeStep?.compare?.includes(idx);
+          const isSwapped = activeStep?.swap?.includes(idx);
 
           return (
             <motion.div
               key={idx}
               layout
               transition={{ type: "spring", stiffness: 350, damping: 25 }}
-              className={`flex-1 rounded-t-md flex items-end justify-center select-none ${barClass}`}
+              className={`flex-1 min-w-0 rounded-t-lg flex flex-col items-center justify-between py-2 select-none relative transition-colors ${barClass}`}
               style={{ height: heightVal }}
             >
-              {showNumber && (
-                <span className="font-mono text-[9px] font-bold text-white pb-1 rotate-90 sm:rotate-0 origin-center truncate">
-                  {val}
-                </span>
-              )}
+              {/* Value Number at the top of the bar */}
+              <span className={`font-mono ${numFont} text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] select-none truncate px-0.5`}>
+                {val}
+              </span>
+
+              {/* Index label at the bottom of the bar */}
+              <span className="font-mono text-[9px] text-white/60 font-medium select-none hidden sm:block">
+                {idx}
+              </span>
             </motion.div>
           );
         })}

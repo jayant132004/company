@@ -73,26 +73,26 @@ export default function CountingVisualizer({
   return (
     <div 
       className="w-full h-full flex flex-col justify-between p-2 gap-4 min-h-0 overflow-y-auto"
-      style={{ transform: `scale(${zoom})`, transformOrigin: "bottom center" }}
+      style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
     >
       
       {/* 1. Input Array */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[8px] font-mono text-gray-500 uppercase tracking-wider block">1. Input Array:</span>
-        <div className="flex gap-1 justify-between select-none">
+      <div className="flex flex-col gap-1.5 shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">1. Input Array:</span>
+        <div className="flex gap-1.5 justify-between select-none overflow-x-auto pb-1">
           {originalArray.map((val, idx) => {
             const isActive = sim.activePointer === idx;
             return (
               <div
                 key={idx}
-                className={`flex-1 py-1.5 rounded border text-center font-mono text-[9px] font-bold transition-all ${
+                className={`flex-1 min-w-[32px] py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${
                   isActive
-                    ? "bg-amber-400/20 border-amber-400 text-amber-300 shadow-sm shadow-amber-400/10"
-                    : "bg-slate-900/40 border-white/5 text-gray-400"
+                    ? "bg-amber-400/30 border-amber-400 text-amber-200 shadow-md shadow-amber-400/20"
+                    : "bg-slate-900 border-white/10 text-gray-200"
                 }`}
               >
                 {val}
-                <span className="block text-[6px] text-gray-600 font-normal">idx:{idx}</span>
+                <span className="block text-[7px] text-gray-500 font-semibold mt-0.5">[{idx}]</span>
               </div>
             );
           })}
@@ -100,11 +100,11 @@ export default function CountingVisualizer({
       </div>
 
       {/* 2. Frequency Counting Array */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[8px] font-mono text-gray-500 uppercase tracking-wider block">
+      <div className="flex flex-col gap-1.5 shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">
           2. Counting Array (Frequencies {sim.phase === "write" ? "& Mappings" : ""}):
         </span>
-        <div className="flex gap-1 justify-between overflow-x-auto select-none py-1">
+        <div className="flex gap-1.5 justify-between overflow-x-auto select-none py-1">
           {sim.count_arr.map((val, idx) => {
             const mappedVal = idx + minVal;
             const isHighlighted = activeStep && activeStep.event_type === "count_increment" && (activeStep.compare && originalArray[activeStep.compare[0]] === mappedVal);
@@ -112,14 +112,14 @@ export default function CountingVisualizer({
             return (
               <div
                 key={idx}
-                className={`flex-1 min-w-[32px] py-1.5 rounded border text-center font-mono text-[9px] font-bold transition-all ${
+                className={`flex-1 min-w-[36px] py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${
                   isHighlighted
-                    ? "bg-indigo-600/20 border-indigo-500 text-indigo-300 shadow-sm shadow-indigo-500/10"
-                    : "bg-slate-950/60 border-white/5 text-gray-400"
+                    ? "bg-indigo-600/30 border-indigo-400 text-indigo-200 shadow-md shadow-indigo-500/20"
+                    : "bg-slate-950 border-white/10 text-gray-300"
                 }`}
               >
                 {val}
-                <span className="block text-[6px] text-gray-500 font-bold">val:{mappedVal}</span>
+                <span className="block text-[7px] text-indigo-400 font-bold mt-0.5">v:{mappedVal}</span>
               </div>
             );
           })}
@@ -127,9 +127,9 @@ export default function CountingVisualizer({
       </div>
 
       {/* 3. Output Array */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[8px] font-mono text-gray-500 uppercase tracking-wider block">3. Output Array:</span>
-        <div className="flex gap-1 justify-between select-none">
+      <div className="flex flex-col gap-1.5 shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">3. Output Array:</span>
+        <div className="flex gap-1.5 justify-between select-none overflow-x-auto pb-1">
           {sim.output_arr.map((val, idx) => {
             const isActive = sim.activeOutputPointer === idx;
             const hasVal = val !== null;
@@ -137,16 +137,16 @@ export default function CountingVisualizer({
             return (
               <div
                 key={idx}
-                className={`flex-1 py-1.5 rounded border text-center font-mono text-[9px] font-bold transition-all ${
+                className={`flex-1 min-w-[32px] py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${
                   isActive
-                    ? "bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm"
+                    ? "bg-emerald-500/30 border-emerald-400 text-emerald-200 shadow-md"
                     : hasVal
-                      ? "bg-slate-900 border-white/10 text-gray-300"
-                      : "bg-slate-950/20 border-dashed border-white/5 text-gray-700"
+                      ? "bg-slate-900 border-white/10 text-gray-200"
+                      : "bg-slate-950/30 border-dashed border-white/10 text-gray-600"
                 }`}
               >
                 {hasVal ? val : "-"}
-                <span className="block text-[6px] text-gray-600 font-normal">idx:{idx}</span>
+                <span className="block text-[7px] text-gray-500 font-semibold mt-0.5">[{idx}]</span>
               </div>
             );
           })}

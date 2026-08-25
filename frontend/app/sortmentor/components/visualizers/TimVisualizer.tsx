@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { VisualizerProps, getNormalizedHeight, getBarColorClass } from "./BaseVisualizer";
+import { VisualizerProps, getNormalizedHeight, getBarColorClass, getNumberFontSizeClass } from "./BaseVisualizer";
 
 export default function TimVisualizer({
   array,
@@ -12,6 +12,7 @@ export default function TimVisualizer({
 }: VisualizerProps) {
   const activeStep = steps[currentStepIndex];
   const accentColor = battleId === 2 ? "pink" : "indigo";
+  const numFont = getNumberFontSizeClass(array.length);
 
   // Parse active run bounds from step messages by scanning backwards
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
@@ -131,7 +132,7 @@ export default function TimVisualizer({
         </div>
 
         {/* Array Bars Grid */}
-        <div className="flex-grow flex items-end justify-between gap-[2px] border-b border-white/5 pb-2 relative min-h-0 select-none overflow-hidden z-10">
+        <div className="flex-grow flex items-end justify-between gap-1 sm:gap-2 border-b border-white/5 pb-2 relative min-h-0 select-none overflow-hidden z-10 px-2 pt-10">
           {array.map((val, idx) => {
             const heightVal = getNormalizedHeight(val, originalArray);
             
@@ -144,31 +145,33 @@ export default function TimVisualizer({
             // Additional custom highlights for TimSort phases
             if (!isCompared && !isSwapped) {
               if (activeRun && idx >= activeRun.start && idx <= activeRun.end) {
-                barClass = "bg-pink-500/40 border-pink-500/50 text-pink-300";
+                barClass = "bg-pink-500/40 border border-pink-500/50 text-pink-300";
               } else if (activeMerge) {
                 if (idx >= activeMerge.leftStart && idx <= activeMerge.leftEnd) {
-                  barClass = "bg-indigo-500/35 border-indigo-500/45 text-indigo-300";
+                  barClass = "bg-indigo-500/40 border border-indigo-500/50 text-indigo-300";
                 } else if (idx >= activeMerge.rightStart && idx <= activeMerge.rightEnd) {
-                  barClass = "bg-violet-500/35 border-violet-500/45 text-violet-300";
+                  barClass = "bg-violet-500/40 border border-violet-500/50 text-violet-300";
                 }
               }
             }
-
-            const showNumber = array.length <= 16;
 
             return (
               <motion.div
                 key={idx}
                 layout
                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                className={`flex-1 rounded-t-md flex items-end justify-center select-none ${barClass}`}
+                className={`flex-1 min-w-0 rounded-t-lg flex flex-col items-center justify-between py-2 select-none relative transition-colors ${barClass}`}
                 style={{ height: heightVal }}
               >
-                {showNumber && (
-                  <span className="font-mono text-[9px] font-bold text-white pb-1 rotate-90 sm:rotate-0 origin-center truncate">
-                    {val}
-                  </span>
-                )}
+                {/* Value Number */}
+                <span className={`font-mono ${numFont} text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] select-none truncate px-0.5`}>
+                  {val}
+                </span>
+
+                {/* Index label */}
+                <span className="font-mono text-[9px] text-white/60 font-medium select-none hidden sm:block">
+                  {idx}
+                </span>
               </motion.div>
             );
           })}
@@ -176,30 +179,30 @@ export default function TimVisualizer({
       </div>
 
       {/* 3. Runs Timeline / Segment Tracker */}
-      <div className="shrink-0 flex flex-col gap-2 p-3 bg-slate-950/40 rounded-xl border border-white/5 mx-2">
-        <span className="text-[8px] font-mono text-gray-500 uppercase tracking-wider block">Run Segments (Size {runSize}):</span>
-        <div className="flex gap-2 justify-between select-none">
+      <div className="shrink-0 flex flex-col gap-1.5 p-3.5 bg-slate-950/60 rounded-xl border border-white/5 mx-2 shadow-inner">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">Run Segments (Size {runSize}):</span>
+        <div className="flex gap-2 justify-between select-none overflow-x-auto pb-0.5">
           {runPartitions.map((r) => {
             const isCurrentRun = activeRun && r.start === activeRun.start;
             const isMergingLeft = activeMerge && r.start >= activeMerge.leftStart && r.end <= activeMerge.leftEnd;
             const isMergingRight = activeMerge && r.start >= activeMerge.rightStart && r.end <= activeMerge.rightEnd;
 
-            let cardStyle = "bg-slate-900/60 border-white/5 text-gray-500";
+            let cardStyle = "bg-slate-900 border-white/10 text-gray-400";
             if (isCurrentRun) {
-              cardStyle = "bg-pink-500/20 border-pink-500 text-pink-300 shadow-[0_0_10px_rgba(236,72,153,0.15)]";
+              cardStyle = "bg-pink-500/30 border-pink-500 text-pink-200 shadow-md shadow-pink-500/20";
             } else if (isMergingLeft) {
-              cardStyle = "bg-indigo-500/20 border-indigo-500 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.15)]";
+              cardStyle = "bg-indigo-500/30 border-indigo-500 text-indigo-200 shadow-md shadow-indigo-500/20";
             } else if (isMergingRight) {
-              cardStyle = "bg-violet-500/20 border-violet-500 text-violet-300 shadow-[0_0_10px_rgba(139,92,246,0.15)]";
+              cardStyle = "bg-violet-500/30 border-violet-500 text-violet-200 shadow-md shadow-violet-500/20";
             }
 
             return (
               <div
                 key={r.id}
-                className={`flex-1 py-2 px-1 rounded-lg border text-center font-mono transition-all ${cardStyle}`}
+                className={`flex-1 min-w-[70px] py-2 px-1.5 rounded-lg border text-center font-mono transition-all ${cardStyle}`}
               >
-                <div className="text-[9px] font-extrabold">Run {r.id}</div>
-                <div className="text-[7px] opacity-60">idx {r.start}-{r.end}</div>
+                <div className="text-xs font-extrabold">Run {r.id}</div>
+                <div className="text-[8px] opacity-75 font-semibold">idx [{r.start}..{r.end}]</div>
               </div>
             );
           })}

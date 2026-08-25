@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { VisualizerProps, getNormalizedHeight, getBarColorClass } from "./BaseVisualizer";
+import { VisualizerProps, getNormalizedHeight, getBarColorClass, getNumberFontSizeClass } from "./BaseVisualizer";
 
 export default function ShellVisualizer({
   array,
@@ -12,6 +12,7 @@ export default function ShellVisualizer({
 }: VisualizerProps) {
   const activeStep = steps[currentStepIndex];
   const accentColor = battleId === 2 ? "pink" : "indigo";
+  const numFont = getNumberFontSizeClass(array.length);
 
   // Find the current gap size by scanning backward
   const currentGap = useMemo(() => {
@@ -40,14 +41,14 @@ export default function ShellVisualizer({
 
   return (
     <div 
-      className="w-full h-full flex flex-col justify-between min-h-0"
+      className="w-full h-full flex flex-col justify-between min-h-0 relative overflow-hidden"
       style={{ transform: `scale(${zoom})`, transformOrigin: "bottom center" }}
     >
       {/* Dynamic Arch comparison SVG Overlay */}
       <div className="flex-1 relative flex flex-col justify-end min-h-0">
         
         {activeStep?.compare && activeStep.compare.length >= 2 && (
-          <svg className="absolute inset-0 w-full h-[80px] pointer-events-none z-10">
+          <svg className="absolute inset-x-0 top-0 w-full h-[90px] pointer-events-none z-20">
             {(() => {
               const [c1, c2] = activeStep.compare;
               const n = array.length;
@@ -57,9 +58,9 @@ export default function ShellVisualizer({
               
               return (
                 <path
-                  d={`M ${leftPercent}% 75 Q ${midPercent}% 15, ${rightPercent}% 75`}
+                  d={`M ${leftPercent}% 85 Q ${midPercent}% 15, ${rightPercent}% 85`}
                   fill="none"
-                  stroke="rgba(251, 191, 36, 0.9)"
+                  stroke="rgba(251, 191, 36, 0.95)"
                   strokeWidth="2.5"
                   strokeDasharray="4 2"
                   className="animate-[dash_1s_linear_infinite]"
@@ -70,7 +71,7 @@ export default function ShellVisualizer({
         )}
 
         {/* Array Bars Grid */}
-        <div className="flex-grow flex items-end justify-between gap-[2px] border-b border-white/5 pb-2 relative min-h-0 select-none overflow-hidden pt-12">
+        <div className="flex-grow flex items-end justify-between gap-1 sm:gap-2 border-b border-white/5 pb-2 relative min-h-0 select-none px-2 pt-14">
           {array.map((val, idx) => {
             const heightVal = getNormalizedHeight(val, originalArray);
             
@@ -80,14 +81,15 @@ export default function ShellVisualizer({
             const defaultBarColor = getBarColorClass(idx, activeStep, accentColor);
             
             const gapColor = getGapGroupColor(idx, currentGap);
-            const showNumber = array.length <= 16;
 
             const finalStyle: React.CSSProperties = { height: heightVal };
             let finalClass = defaultBarColor;
 
             if (!isCompared && !isSwapped && gapColor) {
               finalStyle.backgroundColor = gapColor;
-              finalClass = "flex-1 rounded-t-md flex items-end justify-center select-none shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)]";
+              finalClass = "flex-1 rounded-t-lg flex flex-col items-center justify-between py-2 select-none shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)]";
+            } else {
+              finalClass = `flex-1 rounded-t-lg flex flex-col items-center justify-between py-2 select-none transition-colors ${defaultBarColor}`;
             }
 
             return (
@@ -95,14 +97,18 @@ export default function ShellVisualizer({
                 key={idx}
                 layout
                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                className={`${finalClass}`}
+                className={finalClass}
                 style={finalStyle}
               >
-                {showNumber && (
-                  <span className="font-mono text-[9px] font-bold text-white pb-1 rotate-90 sm:rotate-0 origin-center truncate">
-                    {val}
-                  </span>
-                )}
+                {/* Value Number */}
+                <span className={`font-mono ${numFont} text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] select-none truncate px-0.5`}>
+                  {val}
+                </span>
+
+                {/* Index label */}
+                <span className="font-mono text-[9px] text-white/60 font-medium select-none hidden sm:block">
+                  {idx}
+                </span>
               </motion.div>
             );
           })}
@@ -111,9 +117,9 @@ export default function ShellVisualizer({
 
       {/* Gap status banner */}
       {currentGap > 0 && (
-        <div className="shrink-0 flex justify-between items-center text-[8px] font-mono text-gray-500 py-1 bg-slate-950/20 px-2 rounded-b border-t border-white/5">
-          <span>Active Gap: <b className="text-pink-400">{currentGap}</b></span>
-          <span>Interleaved Subarrays: {currentGap} distinct groups</span>
+        <div className="shrink-0 flex justify-between items-center text-[9px] font-mono text-gray-400 py-1 bg-slate-950/40 px-3 rounded-b border-t border-white/5">
+          <span>Active Gap Interval: <b className="text-pink-400 font-bold">{currentGap}</b></span>
+          <span>Interleaved Groups: {currentGap}</span>
         </div>
       )}
     </div>

@@ -38,18 +38,18 @@ export interface VisualizerLayout {
 }
 
 export const ALGO_LAYOUTS: Record<string, VisualizerLayout> = {
-  bubble: { preferredWidth: "100%", preferredHeight: 600, explanation: "right", aiDrawer: true },
-  selection: { preferredWidth: "100%", preferredHeight: 600, explanation: "right", aiDrawer: true },
-  insertion: { preferredWidth: "100%", preferredHeight: 600, explanation: "right", aiDrawer: true },
-  quick: { preferredWidth: "100%", preferredHeight: 620, explanation: "right", aiDrawer: true },
-  merge: { preferredWidth: "100%", preferredHeight: 850, explanation: "bottom", aiDrawer: true },
-  heap: { preferredWidth: "100%", preferredHeight: 700, explanation: "bottom", aiDrawer: true },
-  counting: { preferredWidth: "100%", preferredHeight: 620, explanation: "bottom", aiDrawer: true },
-  radix: { preferredWidth: "100%", preferredHeight: 650, explanation: "bottom", aiDrawer: true },
-  bucket: { preferredWidth: "100%", preferredHeight: 650, explanation: "bottom", aiDrawer: true },
-  shell: { preferredWidth: "100%", preferredHeight: 600, explanation: "bottom", aiDrawer: true },
-  tim: { preferredWidth: "100%", preferredHeight: 700, explanation: "bottom", aiDrawer: true },
-  timsort: { preferredWidth: "100%", preferredHeight: 700, explanation: "bottom", aiDrawer: true },
+  bubble: { preferredWidth: "100%", preferredHeight: 540, explanation: "right", aiDrawer: true },
+  selection: { preferredWidth: "100%", preferredHeight: 560, explanation: "right", aiDrawer: true },
+  insertion: { preferredWidth: "100%", preferredHeight: 540, explanation: "right", aiDrawer: true },
+  quick: { preferredWidth: "100%", preferredHeight: 560, explanation: "right", aiDrawer: true },
+  merge: { preferredWidth: "100%", preferredHeight: 650, explanation: "bottom", aiDrawer: true },
+  heap: { preferredWidth: "100%", preferredHeight: 600, explanation: "bottom", aiDrawer: true },
+  counting: { preferredWidth: "100%", preferredHeight: 560, explanation: "bottom", aiDrawer: true },
+  radix: { preferredWidth: "100%", preferredHeight: 580, explanation: "bottom", aiDrawer: true },
+  bucket: { preferredWidth: "100%", preferredHeight: 600, explanation: "bottom", aiDrawer: true },
+  shell: { preferredWidth: "100%", preferredHeight: 540, explanation: "bottom", aiDrawer: true },
+  tim: { preferredWidth: "100%", preferredHeight: 600, explanation: "bottom", aiDrawer: true },
+  timsort: { preferredWidth: "100%", preferredHeight: 600, explanation: "bottom", aiDrawer: true },
 };
 
 // Shared Styling Utilities for Visualizers
@@ -58,8 +58,16 @@ export const getNormalizedHeight = (val: number, originalArray: number[]): strin
   const maxVal = Math.max(...originalArray, 1);
   const range = maxVal - minVal;
   if (range === 0) return "50%";
-  const percentage = ((val - minVal) / range) * 80 + 20; // Ensure at least 20% visible height
+  // Safe scaling: minimum 20% height, maximum 78% height to leave room for badges/keys
+  const percentage = ((val - minVal) / range) * 58 + 20;
   return `${percentage}%`;
+};
+
+export const getNumberFontSizeClass = (arrayLength: number): string => {
+  if (arrayLength <= 10) return "text-sm font-extrabold";
+  if (arrayLength <= 14) return "text-xs font-bold";
+  if (arrayLength <= 18) return "text-[11px] font-bold";
+  return "text-[10px] font-semibold";
 };
 
 export const getBarColorClass = (

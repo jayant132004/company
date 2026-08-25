@@ -1,246 +1,1356 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useMemo, useCallback, Suspense } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+  Suspense,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortStore, SortStep } from "../../context/useSortStore";
 import { useAuthStore } from "../../context/useAuthStore";
 import {
-  Play, Pause, RotateCcw, ChevronRight, ChevronLeft,
-  ArrowLeft, BrainCircuit, Swords, Sliders, Zap,
-  Sparkles, Send, HelpCircle, GraduationCap, X,
-  Plus, Trash2, Edit2, Download, Search, Pin,
-  Volume2, Maximize2, Minimize2, Check, AlertCircle, Sparkle,
-  ZoomIn, ZoomOut
+  Play,
+  Pause,
+  RotateCcw,
+  ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
+  BrainCircuit,
+  Swords,
+  Sliders,
+  Zap,
+  Send,
+  HelpCircle,
+  GraduationCap,
+  X,
+  Plus,
+  Trash2,
+  Edit2,
+  Download,
+  Search,
+  Pin,
+  Maximize2,
+  Minimize2,
+  AlertCircle,
+  Sparkle,
+  ZoomIn,
+  ZoomOut,
+  BookOpen,
+  Layers,
+  Eye,
+  Code2,
+  CheckCircle2,
+  ListOrdered,
+  ShieldCheck,
+  Scale,
+  Lightbulb,
+  Compass,
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
 import VisualizerFactory from "./components/visualizers/VisualizerFactory";
 import { ALGO_LAYOUTS } from "./components/visualizers/BaseVisualizer";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-const CONCEPTUAL_WALKTHROUGHS: Record<string, string> = {
-  bubble: "Compares adjacent elements side-by-side and swaps them if they are out of order, repeating this pass until the largest unsorted value 'bubbles up' to the end. Ideal for understanding the basic swap logic.",
-  selection: "Repeatedly scans the unsorted region of the array to select the minimum element, and swaps it directly with the first unsorted element. This builds up the sorted region one element at a time from left to right.",
-  insertion: "Builds a sorted section from left to right. It takes the next unsorted element and slides it backward into its correct position among the already sorted items, similar to how people sort playing cards in hand.",
-  quick: "Uses a divide-and-conquer strategy: it chooses a 'pivot' element, partitions the array so smaller values go to the left and larger values go to the right, and then recursively sorts the sub-arrays.",
-  merge: "Recursively splits the array in half until individual elements remain, then merges those sorted sub-arrays back together in order. This division is represented as a tree structure in the visualizer.",
-  heap: "Converts the array into a Max Heap binary tree structure where the largest value is at the top root. It swaps the root to the end, shrinks the active heap, and rebuilds the heap order until fully sorted.",
-  shell: "An optimization over Insertion Sort. It compares elements that are far apart using a dynamic 'gap' distance, then shrinks the gap and performs a final standard insertion sort when the gap reaches 1.",
-  counting: "A non-comparison sorting algorithm. It counts the number of occurrences of each unique value, calculates their starting index offset, and places each element directly into its correct index in a temporary output array.",
-  radix: "Sorts numbers digit-by-digit, starting from the least significant digit (ones place) up to the most significant digit (tens/hundreds place), using a stable sorting algorithm like Counting Sort at each digit step.",
-  bucket: "Distributes the array elements into several sub-containers (buckets) based on their value ranges. Each bucket is then sorted individually using Insertion Sort, and the buckets are merged back together.",
-  timsort: "A hybrid sorting algorithm derived from Merge Sort and Insertion Sort. It identifies small segments that are already sorted (runs), sorts remaining small chunks with Insertion Sort, and merges them using Merge Sort."
-};
+export interface AlgoVisualStepGuide {
+  event: string;
+  colorClass: string;
+  badge: string;
+  title: string;
+  meaning: string;
+  why: string;
+}
 
-// CS Education Metadata & Pseudocode definitions
-const ALGO_METADATA: Record<string, {
+export interface AlgoVisualStepGuide {
+  event: string;
+  colorClass: string;
+  badge: string;
+  title: string;
+  meaning: string;
+  why: string;
+}
+
+export interface AlgoProcessStep {
+  num: number;
+  title: string;
+  desc: string;
+}
+
+export interface AlgoGuide {
   name: string;
+  category: string;
+  tagline: string;
+  description: string;
+  realWorldAnalogy: string;
+  // Step 1: Goal & Mini Preview
+  step1_goal: string;
+  step1_analogy: string;
+  step1_miniBefore: number[];
+  step1_miniAction: string;
+  step1_miniAfter: number[];
+  // Step 2: Decision Engine (Swaps vs Shifts)
+  step2_decisionTitle: string;
+  step2_decisionRule: string;
+  step2_actionType: string;
+  step2_howItDecides: string;
+  // Step 3: Best & Worst Case Scenarios
   timeBest: string;
   timeAvg: string;
   timeWorst: string;
   space: string;
-  description: string;
+  stable: boolean;
+  inPlace: boolean;
+  step3_bestTitle: string;
+  step3_bestDetails: string;
+  step3_worstTitle: string;
+  step3_worstDetails: string;
+  whySpace: string;
+  whyBest: string;
+  whyWorst: string;
+  processSteps: AlgoProcessStep[];
+  visualizerGuide: AlgoVisualStepGuide[];
+  invariants: string[];
   pseudocode: string[];
-}> = {
+}
+
+export const ALGO_GUIDES: Record<string, AlgoGuide> = {
   bubble: {
     name: "Bubble Sort",
-    timeBest: "O(n)",
-    timeAvg: "O(n²)",
-    timeWorst: "O(n²)",
-    space: "O(1)",
-    description: "Repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.",
+    category: "Comparison-Based Exchange Sort",
+    tagline: "Repeatedly steps through adjacent pairs, bubbling larger values to the right end like bubbles rising in water.",
+    description:
+      "Bubble Sort is an elementary comparison-based algorithm. It works by making repeated linear passes across the array from left to right. In each pass, it compares consecutive adjacent elements (A[j] and A[j+1]). If the elements are in inverted order (A[j] > A[j+1]), they are immediately swapped. Over n-1 passes, all elements settle into their final sorted positions.",
+    realWorldAnalogy:
+      "Physical bubbles of air in water: larger, heavier buoyant forces drive bigger bubbles up to the surface first until all bubbles settle in ascending order from deepest to shallowest.",
+    step1_goal:
+      "Bubble the single largest unsorted element to the far-right boundary on every linear pass by testing consecutive pairs.",
+    step1_analogy:
+      "Like physical air bubbles rising through water: on every pass, the biggest element is continuously carried rightward until it settles in its permanent position.",
+    step1_miniBefore: [45, 12, 88, 34],
+    step1_miniAction:
+      "12 and 45 compare & swap ➔ 45 and 88 stay in place ➔ 88 and 34 swap ➔ 88 settles at the end!",
+    step1_miniAfter: [12, 45, 34, 88],
+    step2_decisionTitle: "Adjacent Pair Inversion Test",
+    step2_decisionRule: "If array[j] > array[j + 1]  ➔  swap(array[j], array[j + 1])",
+    step2_actionType: "Adjacent In-Place Swaps",
+    step2_howItDecides:
+      "Bubble Sort only inspects immediate neighbors (j and j+1). If the left element is strictly greater than the right element, it executes a swap. If they are equal or already in order, it leaves them untouched to preserve stability.",
+    timeBest: "O(n) - Linear Time",
+    timeAvg: "O(n²) - Quadratic Time",
+    timeWorst: "O(n²) - Quadratic Time",
+    space: "O(1) - Constant Auxiliary Space",
+    stable: true,
+    inPlace: true,
+    step3_bestTitle: "Already Sorted Array (0 Swaps)",
+    step3_bestDetails:
+      "A single pass of n - 1 comparisons confirms 0 inversions exist. The early-exit boolean flag halts execution in optimal O(n) time.",
+    step3_worstTitle: "Reverse-Sorted Array (Max Inversions)",
+    step3_worstDetails:
+      "Every single pair comparison finds an inversion, requiring (n - 1) + (n - 2) + ... + 1 = n*(n-1)/2 comparisons and swaps (O(n²)).",
+    whyBest:
+      "When the array is already sorted, the algorithm makes a single linear pass of n - 1 comparisons. Because no swaps occur, the boolean 'swapped' flag remains false, allowing the algorithm to terminate immediately in O(n) time.",
+    whyWorst:
+      "When the array is reverse-sorted, every single comparison finds an inversion, requiring n*(n-1)/2 comparisons and swaps.",
+    whySpace:
+      "Operates directly on the input array in place using a single temporary scalar variable (O(1) aux space).",
+    processSteps: [
+      {
+        num: 1,
+        title: "Initialize Pass & Flag",
+        desc: "Begin pass i = 0 from left. Set boolean flag 'swapped = false'.",
+      },
+      {
+        num: 2,
+        title: "Adjacent Scan & Compare",
+        desc: "Iterate j from 0 up to n - 1 - i. Test if array[j] > array[j + 1].",
+      },
+      {
+        num: 3,
+        title: "Conditional Exchange",
+        desc: "If inverted, swap the elements and mark swapped = true.",
+      },
+      {
+        num: 4,
+        title: "Lock Suffix Element",
+        desc: "The largest element in the unsorted range is locked at index n - 1 - i.",
+      },
+      {
+        num: 5,
+        title: "Early Termination Check",
+        desc: "If no swaps occurred throughout the pass, halt immediately.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "comparison",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Highlight",
+        title: "Adjacent Pair Evaluation (j vs j+1)",
+        meaning: "The visualizer highlights the two adjacent bars currently being tested by the CPU comparator.",
+        why: "To evaluate whether array[j] > array[j+1]. If true, an inversion exists that violates ascending order.",
+      },
+      {
+        event: "swap",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Swap Animation",
+        title: "Exchanging Inverted Elements",
+        meaning: "The two bars slide horizontally and exchange array indices.",
+        why: "The left element was strictly greater than the right element. Swapping them brings both elements closer to their correct positions.",
+      },
+      {
+        event: "locked",
+        colorClass: "bg-emerald-500 text-white",
+        badge: "Green Settled",
+        title: "Permanent Sorted Lock",
+        meaning: "The bar at the rightmost boundary turns solid green.",
+        why: "The maximum value of this pass has reached its immutable sorted position and will never be moved or compared again.",
+      },
+    ],
+    invariants: [
+      "Loop Invariant: After pass k, suffix array[n-k..n-1] contains the k largest elements in sorted ascending order.",
+      "Stability Guarantee: Equal elements are never swapped, preserving original relative order.",
+    ],
     pseudocode: [
-      "for i from 0 to n-1:",
-      "  for j from 0 to n-i-2:",
-      "    if arr[j] > arr[j+1]:",
-      "      swap(arr[j], arr[j+1])"
-    ]
+      "procedure bubbleSort(A : list of sortable items)",
+      "  n = length(A)",
+      "  repeat",
+      "    swapped = false",
+      "    for i from 1 to n - 1 inclusive do:",
+      "      if A[i - 1] > A[i] then",
+      "        swap(A[i - 1], A[i])",
+      "        swapped = true",
+      "      end if",
+      "    end for",
+      "    n = n - 1",
+      "  until not swapped",
+      "end procedure",
+    ],
   },
   selection: {
     name: "Selection Sort",
-    timeBest: "O(n²)",
-    timeAvg: "O(n²)",
-    timeWorst: "O(n²)",
-    space: "O(1)",
-    description: "Divides the input list into two parts: a sorted sublist of items built up from left to right and a sublist of the remaining unsorted items.",
+    category: "Comparison-Based Selection Sort",
+    tagline: "Scans the unsorted region to find the global minimum and locks it into place with minimal swaps.",
+    description:
+      "Selection Sort divides the array into a sorted subarray on the left and an unsorted subarray on the right. In each pass, it systematically scans the entire unsorted region to find the absolute minimum value, then performs a single swap with the element at the sorted boundary. It minimizes total memory writes (exactly n - 1 swaps).",
+    realWorldAnalogy:
+      "Organizing cards by looking through all unsorted cards on the table, picking out the single smallest card, placing it at the front of your hand, and repeating.",
+    step1_goal:
+      "Find the absolute minimum item in the unsorted suffix and lock it into the current sorted boundary index.",
+    step1_analogy:
+      "Scanning an entire catalog of items, picking the single cheapest item, placing it into slot 1, and repeating for slot 2, slot 3...",
+    step1_miniBefore: [64, 25, 12, 22],
+    step1_miniAction:
+      "Scans [64, 25, 12, 22] ➔ Minimum is 12 ➔ Swaps 64 with 12 ➔ 12 is locked at index 0!",
+    step1_miniAfter: [12, 25, 64, 22],
+    step2_decisionTitle: "Global Minimum Candidate Search",
+    step2_decisionRule: "If array[j] < array[min_idx]  ➔  min_idx = j  (Swap once at pass end)",
+    step2_actionType: "Selective Single Swaps (Minimal Writes)",
+    step2_howItDecides:
+      "Unlike Bubble Sort which swaps repeatedly, Selection Sort only observes. It tracks the lowest candidate index during its scan, and performs exactly ONE swap at the end of each pass.",
+    timeBest: "O(n²) - Quadratic Time",
+    timeAvg: "O(n²) - Quadratic Time",
+    timeWorst: "O(n²) - Quadratic Time",
+    space: "O(1) - Constant Auxiliary Space",
+    stable: false,
+    inPlace: true,
+    step3_bestTitle: "All Inputs (Even Sorted)",
+    step3_bestDetails:
+      "Selection Sort has no early-exit capability because it must scan the entire unsorted suffix to verify that no smaller element exists (always n*(n-1)/2 comparisons).",
+    step3_worstTitle: "All Inputs (Worst = Best)",
+    step3_worstDetails:
+      "Always makes exactly n*(n-1)/2 comparisons and at most n - 1 memory writes, making it ideal when write operations are physically expensive (e.g. Flash EEPROM).",
+    whyBest:
+      "Even if the array is already sorted, Selection Sort has no way to know without scanning the entire unsorted suffix in each pass.",
+    whyWorst:
+      "Always scans every element in the remaining unsorted subarray to guarantee the absolute minimum is found.",
+    whySpace:
+      "In-place sorting using two index pointers (min_idx, j) in O(1) space.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Define Sorted Boundary",
+        desc: "Start with index i = 0 as boundary between sorted (left) and unsorted (right).",
+      },
+      {
+        num: 2,
+        title: "Initialize Min Candidate",
+        desc: "Set min_idx = i, assuming first unsorted element is smallest.",
+      },
+      {
+        num: 3,
+        title: "Linear Scan of Suffix",
+        desc: "Iterate j from i + 1 to n - 1. If array[j] < array[min_idx], update min_idx = j.",
+      },
+      {
+        num: 4,
+        title: "Strategic Single Swap",
+        desc: "If min_idx != i, swap array[i] with array[min_idx].",
+      },
+      {
+        num: 5,
+        title: "Advance Boundary",
+        desc: "Increment i by 1 and repeat until array is sorted.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "comparison",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Scanner",
+        title: "Testing Unsorted Candidate (j vs min_idx)",
+        meaning: "The amber bar shows the scanner inspecting each unsorted item in sequence.",
+        why: "To check if array[j] is smaller than the current minimum candidate found in this pass.",
+      },
+      {
+        event: "min_candidate",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Min Badge",
+        title: "Smallest Value Found So Far",
+        meaning: "The rose bar marks the lowest value identified in the current pass.",
+        why: "Holds the reference to the smallest element until the end of the pass scan.",
+      },
+      {
+        event: "locked",
+        colorClass: "bg-emerald-500 text-white",
+        badge: "Green Sorted Boundary",
+        title: "Sorted Prefix Extension",
+        meaning: "The leftmost bars turn green sequentially from index 0 to n-1.",
+        why: "Confirms that the smallest elements have been placed in strictly ascending order.",
+      },
+    ],
+    invariants: [
+      "Subarray array[0..i-1] contains the i smallest elements in sorted ascending order.",
+      "Executes exactly n - 1 swaps across the entire sorting lifecycle.",
+    ],
     pseudocode: [
-      "for i from 0 to n-1:",
-      "  min_idx = i",
-      "  for j from i+1 to n:",
-      "    if arr[j] < arr[min_idx]: min_idx = j",
-      "  swap(arr[i], arr[min_idx])"
-    ]
+      "procedure selectionSort(A : list of sortable items)",
+      "  n = length(A)",
+      "  for i = 0 to n - 2 do:",
+      "    min_idx = i",
+      "    for j = i + 1 to n - 1 do:",
+      "      if A[j] < A[min_idx] then",
+      "        min_idx = j",
+      "      end if",
+      "    end for",
+      "    if min_idx != i then",
+      "      swap(A[i], A[min_idx])",
+      "    end if",
+      "  end for",
+      "end procedure",
+    ],
   },
   insertion: {
     name: "Insertion Sort",
-    timeBest: "O(n)",
-    timeAvg: "O(n²)",
+    category: "Incremental Insertion Sort",
+    tagline: "Builds a sorted array one element at a time by sliding each key backward into its precise slot.",
+    description:
+      "Insertion Sort iterates from left to right, lifting element array[i] as the active 'KEY'. It compares the KEY backwards against the sorted subarray on the left, shifting larger elements one position to the right to open a gap, and inserts the KEY into its correct slot.",
+    realWorldAnalogy:
+      "Sorting cards in your hand: take the next card dealt, scan backwards through the cards you're holding, slide larger ones over, and slot the new card in.",
+    step1_goal:
+      "Lift the next incoming element as a 'KEY' and slide it backward into its sorted slot in the sorted prefix.",
+    step1_analogy:
+      "Inserting a new playing card into an already sorted hand: you shift larger cards to the right to open a gap, then drop the new card into place.",
+    step1_miniBefore: [12, 25, 64, 22],
+    step1_miniAction:
+      "Sorted prefix is [12, 25, 64]. KEY is 22 ➔ 64 and 25 shift right ➔ 22 inserts after 12!",
+    step1_miniAfter: [12, 22, 25, 64],
+    step2_decisionTitle: "Backward Inversion & Displacement",
+    step2_decisionRule: "While j >= 0 and array[j] > key  ➔  array[j + 1] = array[j] (Shift right)",
+    step2_actionType: "Rightward Shifts (Not Swaps)",
+    step2_howItDecides:
+      "Insertion Sort does not swap pairs back and forth. It holds the KEY in a temporary register and shifts larger elements one position rightward, inserting the KEY in one final write.",
+    timeBest: "O(n) - Linear Time",
+    timeAvg: "O(n²) - Quadratic Time",
     timeWorst: "O(n²)",
-    space: "O(1)",
-    description: "Builds the final sorted array one item at a time by inserting each new element into its proper position relative to previously sorted elements.",
+    space: "O(1) - Constant Auxiliary Space",
+    stable: true,
+    inPlace: true,
+    step3_bestTitle: "Nearly Sorted or Sorted Input",
+    step3_bestDetails:
+      "Each key is compared only once with its immediate left neighbor and requires 0 shifts, giving optimal linear O(n) performance.",
+    step3_worstTitle: "Reverse-Sorted Input",
+    step3_worstDetails:
+      "Each element at index i must be compared and shifted past all i preceding elements, totaling n*(n-1)/2 shifts.",
+    whyBest:
+      "On already sorted data, each key requires 1 comparison and 0 shifts.",
+    whyWorst:
+      "On reverse-sorted arrays, each element must shift past all preceding elements.",
+    whySpace:
+      "Shifting occurs directly in the array buffer with O(1) scalar temporary variable for the key.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Assume Base Prefix",
+        desc: "Consider index 0 as a trivially sorted subarray of size 1.",
+      },
+      {
+        num: 2,
+        title: "Extract Active Key",
+        desc: "Lift array[i] out of array as the floating 'KEY' element.",
+      },
+      {
+        num: 3,
+        title: "Backward Scan & Shift",
+        desc: "While j >= 0 and array[j] > KEY, shift array[j] to j + 1 and decrement j.",
+      },
+      {
+        num: 4,
+        title: "Insert Key",
+        desc: "Place KEY into vacated slot array[j + 1].",
+      },
+      {
+        num: 5,
+        title: "Expand Sorted Segment",
+        desc: "Increment i from 1 to n - 1 until all elements are sorted.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "key_extract",
+        colorClass: "bg-purple-500 text-white",
+        badge: "Purple Floating Key",
+        title: "Active Key Lifted",
+        meaning: "The current item is elevated above the baseline with a purple KEY badge.",
+        why: "To visually hold the value in memory while shifting larger elements underneath.",
+      },
+      {
+        event: "shift",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Shifted Bar",
+        title: "Rightward Element Displacement",
+        meaning: "Bars in the sorted prefix slide right by one position.",
+        why: "Because they are strictly greater than the KEY and must vacate space.",
+      },
+      {
+        event: "insert",
+        colorClass: "bg-indigo-500 text-white",
+        badge: "Indigo Insertion",
+        title: "Key Placement in Sorted Slot",
+        meaning: "The purple key drops into its verified sorted slot.",
+        why: "All elements to its left are now <= KEY, and all elements to its right are > KEY.",
+      },
+    ],
+    invariants: [
+      "At iteration i, subarray array[0..i-1] is fully sorted.",
+      "Number of operations is directly proportional to number of inversions.",
+    ],
     pseudocode: [
-      "for i from 1 to n:",
-      "  key = arr[i]",
-      "  j = i - 1",
-      "  while j >= 0 and arr[j] > key:",
-      "    arr[j+1] = arr[j]",
-      "    j = j - 1",
-      "  arr[j+1] = key"
-    ]
+      "procedure insertionSort(A : list of sortable items)",
+      "  for i = 1 to length(A) - 1 do:",
+      "    key = A[i]",
+      "    j = i - 1",
+      "    while j >= 0 and A[j] > key do:",
+      "      A[j + 1] = A[j]",
+      "      j = j - 1",
+      "    end while",
+      "    A[j + 1] = key",
+      "  end for",
+      "end procedure",
+    ],
   },
   quick: {
     name: "Quick Sort",
-    timeBest: "O(n log n)",
-    timeAvg: "O(n log n)",
-    timeWorst: "O(n²)",
-    space: "O(log n)",
-    description: "Divides the array into smaller sub-arrays around a pivot, then recursively sorts the sub-arrays.",
+    category: "Divide & Conquer Partitioning",
+    tagline: "Selects a pivot, partitions elements into smaller and larger subsets, and sorts recursively.",
+    description:
+      "Quick Sort selects a reference 'pivot' element and partitions the array such that all elements smaller than the pivot are placed to its left, and all elements larger are placed to its right. The pivot locks into its final position, and Quick Sort recurses on both partitions.",
+    realWorldAnalogy:
+      "Organizing people by height: pick one reference person (pivot), have everyone shorter move left and everyone taller move right. The reference person is in their final spot.",
+    step1_goal:
+      "Pick a pivot element, divide the array into values smaller and larger than the pivot, and sort both halves recursively.",
+    step1_analogy:
+      "Sorting people by height relative to a reference benchmark: shorter people move to the left group, taller to the right group, locking the benchmark in place.",
+    step1_miniBefore: [38, 27, 43, 10],
+    step1_miniAction:
+      "Pivot chosen as 10 ➔ Values <= 10 move left, > 10 move right ➔ 10 locks in final sorted slot!",
+    step1_miniAfter: [10, 27, 43, 38],
+    step2_decisionTitle: "Pivot-Based Partition Condition",
+    step2_decisionRule: "If array[j] <= pivot  ➔  i++; swap(array[i], array[j])",
+    step2_actionType: "Partition Swaps & Pivot Lock",
+    step2_howItDecides:
+      "Quick Sort scans with pointer j. Whenever it finds an element <= pivot, it increments boundary pointer i and swaps the smaller element into the left partition.",
+    timeBest: "O(n log n) - Linearithmic",
+    timeAvg: "O(n log n) - Linearithmic",
+    timeWorst: "O(n²) - Degenerate Partitioning",
+    space: "O(log n) - Recursion Stack",
+    stable: false,
+    inPlace: true,
+    step3_bestTitle: "Balanced Partitioning (50/50 Splits)",
+    step3_bestDetails:
+      "When the pivot divides the subarray into roughly equal halves at each recursion level, the tree depth is log2(n), yielding O(n log n) time.",
+    step3_worstTitle: "Unbalanced Partitioning on Sorted Data",
+    step3_worstDetails:
+      "When the chosen pivot is always the extreme smallest/largest element, recursion depth degrades to n, producing T(n) = T(n-1) + O(n) = O(n²).",
+    whyBest:
+      "Recurrence tree depth is log2(n) when partitions are balanced.",
+    whyWorst:
+      "Degrades into a linked list of depth n when pivot divides into 0 and n-1 items.",
+    whySpace:
+      "In-place partitioning with O(log n) recursion call stack depth.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Select Reference Pivot",
+        desc: "Choose an element (e.g. array[high]) to serve as reference pivot.",
+      },
+      {
+        num: 2,
+        title: "Two-Pointer Partition Scan",
+        desc: "Set boundary i = low - 1. Iterate j from low to high - 1.",
+      },
+      {
+        num: 3,
+        title: "Partition Exchange",
+        desc: "If array[j] <= pivot, increment i and swap array[i] with array[j].",
+      },
+      {
+        num: 4,
+        title: "Lock Pivot",
+        desc: "Swap array[i + 1] with array[high]. Pivot is permanently sorted.",
+      },
+      {
+        num: 5,
+        title: "Recursive Subdivision",
+        desc: "Recurse on left [low..pi-1] and right [pi+1..high] partitions.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "pivot_selection",
+        colorClass: "bg-cyan-400 text-slate-950",
+        badge: "Cyan Pivot Badge",
+        title: "Pivot Element Selected",
+        meaning: "The visualizer highlights the reference value with a glowing Cyan indicator and arrow.",
+        why: "This value establishes the dividing line: values < pivot move left, values > pivot move right.",
+      },
+      {
+        event: "pointer_scan",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Pointers (i, j)",
+        title: "Active Partition Pointers",
+        meaning: "Displays boundary pointer i and scanning pointer j.",
+        why: "To maintain the partitioning invariant and find elements needing exchange.",
+      },
+      {
+        event: "partition_swap",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Swap",
+        title: "Partition Exchange",
+        meaning: "Swaps smaller item into the left partition.",
+        why: "To ensure all items to the left of pointer i remain smaller than the pivot.",
+      },
+    ],
+    invariants: [
+      "Partition Invariant: For all k <= i, A[k] <= pivot; for all k > i, A[k] > pivot.",
+      "The pivot never moves again after its partition step completes.",
+    ],
     pseudocode: [
-      "quickSort(arr, low, high):",
-      "  if low < high:",
-      "    pi = partition(arr, low, high)",
-      "    quickSort(arr, low, pi - 1)",
-      "    quickSort(arr, pi + 1, high)"
-    ]
+      "procedure quickSort(A, low, high)",
+      "  if low < high then",
+      "    pi = partition(A, low, high)",
+      "    quickSort(A, low, pi - 1)",
+      "    quickSort(A, pi + 1, high)",
+      "  end if",
+      "end procedure",
+      "",
+      "procedure partition(A, low, high)",
+      "  pivot = A[high]",
+      "  i = low - 1",
+      "  for j = low to high - 1 do:",
+      "    if A[j] <= pivot then",
+      "      i = i + 1",
+      "      swap(A[i], A[j])",
+      "    end if",
+      "  end for",
+      "  swap(A[i + 1], A[high])",
+      "  return i + 1",
+      "end procedure",
+    ],
   },
   merge: {
     name: "Merge Sort",
-    timeBest: "O(n log n)",
-    timeAvg: "O(n log n)",
-    timeWorst: "O(n log n)",
-    space: "O(n)",
-    description: "A divide-and-conquer algorithm that recursively splits the array in half, sorts each half, and merges the sorted halves back together.",
+    category: "Divide & Conquer Merging",
+    tagline: "Guaranteed O(n log n) divide-and-conquer merging of sorted sub-arrays.",
+    description:
+      "Merge Sort recursively splits the array into two equal halves until reaching single-element base cases. It then systematically merges adjacent sorted subarrays back together in linear time using an auxiliary buffer, guaranteeing strict O(n log n) time.",
+    realWorldAnalogy:
+      "Splitting a massive pile of exams into smaller piles, then repeatedly merging pairs of sorted piles by looking at the top two papers.",
+    step1_goal:
+      "Divide the array into single-element halves, then systematically merge pairs of sorted subarrays into a combined sorted list.",
+    step1_analogy:
+      "Merging two sorted decks of cards: you compare the top card of each deck and place the smaller one into the new pile.",
+    step1_miniBefore: [12, 45, 22, 64],
+    step1_miniAction:
+      "Left half [12, 45] + Right half [22, 64] ➔ Compares heads (12 vs 22, 45 vs 22) ➔ Merges into [12, 22, 45, 64]!",
+    step1_miniAfter: [12, 22, 45, 64],
+    step2_decisionTitle: "Two-Pointer Head Comparison",
+    step2_decisionRule: "If Left[p1] <= Right[p2]  ➔  Buffer.push(Left[p1++])  else  Buffer.push(Right[p2++])",
+    step2_actionType: "Auxiliary Buffer Merging",
+    step2_howItDecides:
+      "Merge Sort compares the front elements of two pre-sorted subarrays. It always picks the smaller item to append to the merged output buffer, ensuring stability.",
+    timeBest: "O(n log n) - Deterministic",
+    timeAvg: "O(n log n) - Deterministic",
+    timeWorst: "O(n log n) - Guaranteed Upper Bound",
+    space: "O(n) - Auxiliary Merge Buffer",
+    stable: true,
+    inPlace: false,
+    step3_bestTitle: "Deterministic O(n log n)",
+    step3_bestDetails:
+      "Always divides array into exact halves (log2 n levels) and performs O(n) merge comparisons per level, guaranteeing O(n log n) in all cases.",
+    step3_worstTitle: "Guaranteed Upper Bound O(n log n)",
+    step3_worstDetails:
+      "Cannot degrade on any input pattern. Recurrence T(n) = 2*T(n/2) + O(n) strictly resolves to O(n log n).",
+    whyBest:
+      "Always executes exact log2(n) division levels and O(n) merge comparisons.",
+    whyWorst:
+      "Immune to adversarial input data distributions.",
+    whySpace:
+      "Requires temporary auxiliary buffer of size n during merge operations.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Midpoint Split",
+        desc: "Split array into left [low..mid] and right [mid+1..high] subproblems.",
+      },
+      {
+        num: 2,
+        title: "Base-Case Reach",
+        desc: "Continue splitting until subarrays reach size 1.",
+      },
+      {
+        num: 3,
+        title: "Sorted Merge",
+        desc: "Compare front heads of both subarrays and write smaller to buffer.",
+      },
+      {
+        num: 4,
+        title: "Drain Leftovers",
+        desc: "Copy remaining elements from non-empty subarray to buffer.",
+      },
+      {
+        num: 5,
+        title: "Copy to Target",
+        desc: "Write buffer back into original array range [low..high].",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "tree_node",
+        colorClass: "bg-indigo-500/30 text-indigo-200 border-indigo-500",
+        badge: "Binary Split Tree",
+        title: "Subarray Recursion Nodes",
+        meaning: "Visualizes the binary subdivision tree dividing larger array ranges into smaller blocks.",
+        why: "Demonstrates the divide-and-conquer hierarchy and depth levels.",
+      },
+      {
+        event: "merge_compare",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Front Compare",
+        title: "Comparing Subarray Heads",
+        meaning: "Highlights the active front items of the left and right subarrays.",
+        why: "To pick the smallest available value in O(1) per step.",
+      },
+      {
+        event: "merge_write",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Merged Output",
+        title: "Merged Buffer Output",
+        meaning: "Elements collected into the combined sorted subarray.",
+        why: "Forms a larger sorted array from two smaller sorted inputs.",
+      },
+    ],
+    invariants: [
+      "Every merged subarray is guaranteed to be completely sorted internally.",
+      "Pulls from left subarray first on equal keys to guarantee stability.",
+    ],
     pseudocode: [
-      "mergeSort(arr, l, r):",
-      "  if l < r:",
-      "    m = l + (r-l)\u002f2",
-      "    mergeSort(arr, l, m)",
-      "    mergeSort(arr, m+1, r)",
-      "    merge(arr, l, m, r)"
-    ]
+      "procedure mergeSort(A, left, right)",
+      "  if left < right then",
+      "    mid = left + (right - left) / 2",
+      "    mergeSort(A, left, mid)",
+      "    mergeSort(A, mid + 1, right)",
+      "    merge(A, left, mid, right)",
+      "  end if",
+      "end procedure",
+    ],
   },
   heap: {
     name: "Heap Sort",
-    timeBest: "O(n log n)",
-    timeAvg: "O(n log n)",
-    timeWorst: "O(n log n)",
-    space: "O(1)",
-    description: "Visualizes the array as a binary tree heap structure. Repeatedly extracts the maximum element from the heap and maintains the heap structure.",
+    category: "Binary Heap Tree Selection",
+    tagline: "Builds a Max-Heap binary tree to extract the maximum element iteratively in O(1) space.",
+    description:
+      "Heap Sort organizes the array into a complete binary Max-Heap structure in O(n) time. It repeatedly extracts the maximum root element by swapping it with the last element of the heap, reduces the active heap size, and calls maxHeapify to restore heap order in O(1) auxiliary space.",
+    realWorldAnalogy:
+      "A tournament playoff bracket: the champion (maximum) is at the top of the pyramid. Once crowned, they leave the tournament, the runner-up climbs to the top, and playoffs repeat.",
+    step1_goal:
+      "Transform the array into a Max-Heap binary tree, extract the maximum root to the end, and sift down in O(1) space.",
+    step1_analogy:
+      "A tournament playoff pyramid: the strongest competitor always sits at the top (root). Extract them to the podium, promote the next best, and repeat.",
+    step1_miniBefore: [45, 88, 12, 34],
+    step1_miniAction:
+      "Builds Max-Heap [88, 45, 12, 34] ➔ Extracts root 88 to end ➔ Sifts down 34 to restore heap!",
+    step1_miniAfter: [45, 34, 12, 88],
+    step2_decisionTitle: "Parent vs Child Dominance Test",
+    step2_decisionRule: "If Child > Parent  ➔  swap(Parent, LargestChild)  and sift down",
+    step2_actionType: "Tree Sifts & Root Extractions",
+    step2_howItDecides:
+      "Heap Sort navigates binary tree indices (left child = 2i+1, right child = 2i+2). If any child exceeds the parent, it swaps the parent with the largest child to maintain the Max-Heap invariant.",
+    timeBest: "O(n log n) - Linearithmic",
+    timeAvg: "O(n log n) - Linearithmic",
+    timeWorst: "O(n log n) - Guaranteed Upper Bound",
+    space: "O(1) - In-Place Tree",
+    stable: false,
+    inPlace: true,
+    step3_bestTitle: "Heap Construction & Sift-Down",
+    step3_bestDetails:
+      "Building the heap takes O(n), and extracting n elements takes n * log2(n) operations in all scenarios.",
+    step3_worstTitle: "Guaranteed O(n log n) Bound",
+    step3_worstDetails:
+      "Tree height is bounded by log2(n). Sifting down an element takes at most log2(n) swaps, guaranteeing O(n log n) upper bound.",
+    whyBest:
+      "Heap construction takes O(n) and extraction takes n * log2(n).",
+    whyWorst:
+      "Height of a binary heap of size n is strictly floor(log2 n).",
+    whySpace:
+      "Heap is mapped directly onto original array indices in O(1) space.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Build Max-Heap",
+        desc: "Convert array into Max-Heap in O(n) time from n/2 - 1 down to 0.",
+      },
+      {
+        num: 2,
+        title: "Extract Root",
+        desc: "Swap root maximum array[0] with last unsorted element array[i].",
+      },
+      {
+        num: 3,
+        title: "Shrink Boundary",
+        desc: "Reduce active heap size by 1 to lock maximum in sorted suffix.",
+      },
+      {
+        num: 4,
+        title: "MaxHeapify",
+        desc: "Sift down the displaced root to restore heap property.",
+      },
+      {
+        num: 5,
+        title: "Repeat Extraction",
+        desc: "Repeat until heap size shrinks to 1.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "heap_tree",
+        colorClass: "bg-indigo-600 text-white",
+        badge: "Binary Heap Tree",
+        title: "Max-Heap Binary Tree Graph",
+        meaning: "Visualizes array indices mapped onto binary tree nodes with parent-child links.",
+        why: "Gives structural insight into heap hierarchy and parent dominance.",
+      },
+      {
+        event: "heapify_compare",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Sift Compare",
+        title: "Comparing Parent vs Children",
+        meaning: "Compares node i with left child (2i+1) and right child (2i+2).",
+        why: "To verify if a child exceeds parent value and identify the largest node to swap.",
+      },
+      {
+        event: "root_extract",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Root Extract",
+        title: "Extracting Max Root to End",
+        meaning: "Swaps root maximum into the end of array.",
+        why: "Accumulates sorted elements from right to left in strictly O(1) extra memory.",
+      },
+    ],
+    invariants: [
+      "For every node i > 0, array[(i-1)/2] >= array[i].",
+      "Extracted suffix array[i..n-1] is always sorted in ascending order.",
+    ],
     pseudocode: [
-      "heapSort(arr):",
-      "  buildMaxHeap(arr)",
-      "  for i from n-1 down to 1:",
-      "    swap(arr[0], arr[i])",
-      "    maxHeapify(arr, 0, i)"
-    ]
+      "procedure heapSort(A)",
+      "  n = length(A)",
+      "  for i = n / 2 - 1 down to 0 do: maxHeapify(A, n, i)",
+      "  for i = n - 1 down to 1 do:",
+      "    swap(A[0], A[i])",
+      "    maxHeapify(A, i, 0)",
+      "  end for",
+      "end procedure",
+    ],
   },
   counting: {
     name: "Counting Sort",
-    timeBest: "O(n+k)",
-    timeAvg: "O(n+k)",
-    timeWorst: "O(n+k)",
-    space: "O(n+k)",
-    description: "An integer sorting algorithm that counts the occurrences of each unique value to map their sorted positions without direct comparisons.",
+    category: "Non-Comparison Linear Time Sort",
+    tagline: "Counts key frequencies and maps them directly into output indices using prefix sums.",
+    description:
+      "Counting Sort is a non-comparison integer sorting algorithm. It counts the frequencies of each unique value within a bounded integer range, computes cumulative prefix sums to determine the exact output index for each key, and writes elements directly to output in linear O(n + k) time.",
+    realWorldAnalogy:
+      "Sorting people by birth month: tally how many people were born in each month, calculate row offsets, and direct everyone straight to their designated seats without comparisons.",
+    step1_goal:
+      "Count occurrences of each integer value and use running prefix sums to write elements directly into their sorted destination index.",
+    step1_analogy:
+      "Sorting students by birth month: you count total students per month, designate row start numbers, and send everyone straight to their row.",
+    step1_miniBefore: [3, 1, 2, 3],
+    step1_miniAction:
+      "Frequency counts: 1:1, 2:1, 3:2 ➔ Prefix sums calculate exact slots ➔ Directly writes [1, 2, 3, 3]!",
+    step1_miniAfter: [1, 2, 3, 3],
+    step2_decisionTitle: "Direct Prefix Index Mapping",
+    step2_decisionRule: "Output[count[x - min] - 1] = x  and  count[x - min]--",
+    step2_actionType: "Direct Output Writes (No Comparisons)",
+    step2_howItDecides:
+      "Counting Sort makes ZERO comparisons between elements. It uses arithmetic index math on key frequencies to place items directly into output memory.",
+    timeBest: "O(n + k) - Linear Time",
+    timeAvg: "O(n + k) - Linear Time",
+    timeWorst: "O(n + k) - Linear Time",
+    space: "O(n + k) - Count Array & Output Buffer",
+    stable: true,
+    inPlace: false,
+    step3_bestTitle: "Linear Time on Bounded Keys",
+    step3_bestDetails:
+      "Takes O(n + k) time where k = max - min + 1 is the range of unique integer values.",
+    step3_worstTitle: "Large Key Range Penalty",
+    step3_worstDetails:
+      "If range k is much larger than n (e.g. 10 numbers between 1 and 1,000,000), space and time overhead is dominated by k.",
+    whyBest:
+      "Linear time proportional to array length n plus integer key range k.",
+    whyWorst:
+      "Dominated by range k when keys are sparsely distributed.",
+    whySpace:
+      "Requires auxiliary count array of size k and output array of size n.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Determine Range",
+        desc: "Scan array to find min and max values (range k = max - min + 1).",
+      },
+      {
+        num: 2,
+        title: "Tally Frequencies",
+        desc: "Increment count[x - min] for each element in input array.",
+      },
+      {
+        num: 3,
+        title: "Compute Prefix Sums",
+        desc: "Set count[i] += count[i - 1] to calculate exact slot offsets.",
+      },
+      {
+        num: 4,
+        title: "Stable Backward Write",
+        desc: "Iterate input from n - 1 down to 0, write to output, decrement count.",
+      },
+      {
+        num: 5,
+        title: "Copy to Result",
+        desc: "Copy sorted output array back into original storage.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "tally",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Tally",
+        title: "Frequency Counting Pass",
+        meaning: "Increments bucket count[x - min] as each input value is scanned.",
+        why: "Measures exact occurrences of every unique integer in O(n) time.",
+      },
+      {
+        event: "prefix_sum",
+        colorClass: "bg-indigo-500 text-white",
+        badge: "Indigo Prefix Accumulator",
+        title: "Running Prefix Sums",
+        meaning: "Sums adjacent counts to find slot boundaries.",
+        why: "Calculates the starting/ending offset where each value must be placed.",
+      },
+      {
+        event: "write_output",
+        colorClass: "bg-emerald-500 text-white",
+        badge: "Green Output Slot",
+        title: "Direct Placement into Output",
+        meaning: "Places values into their calculated output indices.",
+        why: "Achieves sorted order without comparing any elements against each other.",
+      },
+    ],
+    invariants: [
+      "Requires discrete integer keys with bounded range k.",
+      "Backwards iteration preserves stability for duplicate values.",
+    ],
     pseudocode: [
-      "countingSort(arr):",
-      "  count = array of zeros size max-min+1",
-      "  for x in arr: count[x - min]++",
-      "  for i from 1 to count.length: count[i] += count[i-1]",
-      "  for x in arr from right to left:",
-      "    output[count[x - min] - 1] = x",
-      "    count[x - min]--"
-    ]
+      "procedure countingSort(A, min, max)",
+      "  k = max - min + 1",
+      "  count = array of zeros of size k",
+      "  for each x in A do: count[x - min]++",
+      "  for i = 1 to k - 1 do: count[i] += count[i - 1]",
+      "  for i = length(A) - 1 down to 0 do:",
+      "    output[count[A[i] - min] - 1] = A[i]",
+      "    count[A[i] - min]--",
+      "  end for",
+      "end procedure",
+    ],
   },
   radix: {
     name: "Radix Sort",
-    timeBest: "O(nk)",
-    timeAvg: "O(nk)",
-    timeWorst: "O(nk)",
-    space: "O(n+k)",
-    description: "Sorts numbers digit by digit, from the least significant digit to the most significant digit using counting sort as a subroutine.",
+    category: "Positional Non-Comparison Sort",
+    tagline: "Sorts integers digit-by-digit from least to most significant using stable counting passes.",
+    description:
+      "Radix Sort processes integers digit-by-digit from the Least Significant Digit (LSD) to the Most Significant Digit (MSD). At each positional digit (1s, 10s, 100s...), it distributes numbers into 10 buckets using a stable Counting Sort subroutine.",
+    realWorldAnalogy:
+      "Sorting punch cards: first sort cards into 10 bins by the last digit, gather them in order, then sort by second digit, and so on until the first digit is sorted.",
+    step1_goal:
+      "Sort numbers digit-by-digit starting from the 1s place up to the highest digit place using stable bucket distribution.",
+    step1_analogy:
+      "Sorting postal mail by ZIP code: first sort into bins by the 5th digit, gather in order, sort by 4th digit, then 3rd, 2nd, and 1st.",
+    step1_miniBefore: [170, 45, 75, 90],
+    step1_miniAction:
+      "Sort by 1s digit ➔ [170, 90, 45, 75] ➔ Sort by 10s digit ➔ [45, 170, 75, 90] ➔ Fully sorted!",
+    step1_miniAfter: [45, 75, 90, 170],
+    step2_decisionTitle: "Base-10 Digit Extraction",
+    step2_decisionRule: "Digit = (value / exponent) % 10  ➔  Distribute into Bucket[Digit]",
+    step2_actionType: "Positional Radix Bucketing",
+    step2_howItDecides:
+      "Radix Sort extracts the mathematical digit at position exp = 10^k and places the number into base-10 bucket bins, gathering them back stably.",
+    timeBest: "O(d · (n + k)) - Linearithmic / Linear",
+    timeAvg: "O(d · (n + k))",
+    timeWorst: "O(d · (n + k))",
+    space: "O(n + k) - Bucket Storage",
+    stable: true,
+    inPlace: false,
+    step3_bestTitle: "Deterministic Digit Passes",
+    step3_bestDetails:
+      "Performs exactly d passes of Counting Sort, where d is the number of digits in the maximum value and k = 10 is base 10.",
+    step3_worstTitle: "Guaranteed O(d · (n + k))",
+    step3_worstDetails:
+      "Immune to bad initial data ordering because each digit place is processed uniformly.",
+    whyBest:
+      "Performs d passes of Counting Sort where d is maximum digit length.",
+    whyWorst:
+      "Always runs in d passes regardless of data ordering.",
+    whySpace:
+      "Requires temporary bucket storage of size n and frequency array of size 10.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Find Maximum",
+        desc: "Determine total digit places d = floor(log10(max)) + 1.",
+      },
+      {
+        num: 2,
+        title: "Extract Digit",
+        desc: "Extract digit = (x / exp) % 10 for active exponent exp (1, 10, 100...).",
+      },
+      {
+        num: 3,
+        title: "Stable Bucketing",
+        desc: "Distribute numbers into 0-9 buckets using stable Counting Sort.",
+      },
+      {
+        num: 4,
+        title: "Gather & Advance",
+        desc: "Collect items from buckets in order and multiply exp by 10.",
+      },
+      {
+        num: 5,
+        title: "Complete Result",
+        desc: "After highest digit is processed, array is fully sorted.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "digit_scan",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Digit Scan",
+        title: "Scanning Positional Digit",
+        meaning: "Highlights the active digit (1s, 10s, 100s) being evaluated.",
+        why: "Isolates the current radix key for this distribution pass.",
+      },
+      {
+        event: "bucket_dist",
+        colorClass: "bg-indigo-500 text-white",
+        badge: "Indigo 0-9 Buckets",
+        title: "Distribution into Base-10 Buckets",
+        meaning: "Places items into bucket bins labeled 0 through 9.",
+        why: "Groups numbers by their current positional magnitude.",
+      },
+      {
+        event: "collect",
+        colorClass: "bg-emerald-500 text-white",
+        badge: "Green Array Assembly",
+        title: "Gathering Intermediate State",
+        meaning: "Collects items back into flat array for next pass.",
+        why: "Array is now stably sorted up to the current digit position.",
+      },
+    ],
+    invariants: [
+      "After pass with exp = 10^k, array is stably sorted by lowest k + 1 digits.",
+      "Strict stability in intermediate passes is mandatory.",
+    ],
     pseudocode: [
-      "radixSort(arr):",
-      "  max = getMax(arr)",
-      "  for exp = 1; max \u002f exp > 0; exp *= 10:",
-      "    countingSortByDigit(arr, exp)"
-    ]
+      "procedure radixSort(A)",
+      "  max = getMax(A)",
+      "  for exp = 1; max / exp > 0; exp *= 10 do: countingSortByDigit(A, exp)",
+      "end procedure",
+    ],
   },
   bucket: {
     name: "Bucket Sort",
-    timeBest: "O(n+k)",
-    timeAvg: "O(n+k)",
-    timeWorst: "O(n²)",
-    space: "O(n+k)",
-    description: "Distributes elements into interval buckets, sorts each bucket individually (e.g. using insertion sort), and concatenates them.",
+    category: "Scatter-Gather Distribution Sort",
+    tagline: "Distributes elements into range buckets, sorts each bucket individually, and concatenates them.",
+    description:
+      "Bucket Sort partitions the numerical range into k contiguous interval buckets. It scatters input elements into their corresponding buckets, sorts each individual bucket using an inner sort (like Insertion Sort), and concatenates the sorted buckets sequentially.",
+    realWorldAnalogy:
+      "Sorting letters by postal code: letters are distributed into regional bins, each bin's mail is sorted locally, and bins are combined in regional sequence.",
+    step1_goal:
+      "Scatter values into contiguous interval buckets, sort each bucket locally, and concatenate the buckets in order.",
+    step1_analogy:
+      "Sorting mail by postal code into regional bins, sorting each bin locally by street address, and placing bins in delivery order.",
+    step1_miniBefore: [78, 17, 39, 26],
+    step1_miniAction:
+      "Buckets [0-33], [34-66], [67-100] ➔ Scatter ➔ Local sort ➔ Concatenate [17, 26, 39, 78]!",
+    step1_miniAfter: [17, 26, 39, 78],
+    step2_decisionTitle: "Interval Bucket Mapping",
+    step2_decisionRule: "BucketIndex = floor((x - min) / range * k)",
+    step2_actionType: "Scatter-Gather Distribution",
+    step2_howItDecides:
+      "Calculates a normalized bucket index proportional to the element's numerical value, placing it in a local linked list bucket.",
+    timeBest: "O(n + k) - Uniform Distribution",
+    timeAvg: "O(n + k) - Linear Expected Time",
+    timeWorst: "O(n²) - Clustered Input",
+    space: "O(n + k) - Dynamic Buckets",
+    stable: true,
+    inPlace: false,
+    step3_bestTitle: "Uniformly Distributed Data",
+    step3_bestDetails:
+      "When data is evenly spread across buckets, each bucket contains O(1) items, achieving linear O(n + k) sorting time.",
+    step3_worstTitle: "Severe Clustering in 1 Bucket",
+    step3_worstDetails:
+      "If all input elements fall into the exact same bucket, performance degrades to the inner sort algorithm (O(n²) with Insertion Sort).",
+    whyBest:
+      "Each bucket contains O(1) elements on average when data is uniform.",
+    whyWorst:
+      "All elements cluster into a single bucket.",
+    whySpace:
+      "Requires memory for k bucket containers and linked nodes.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Create Buckets",
+        desc: "Initialize k empty bucket lists across interval [min..max].",
+      },
+      {
+        num: 2,
+        title: "Scatter Items",
+        desc: "Map each item to bucket index floor((x - min) / range * k).",
+      },
+      {
+        num: 3,
+        title: "Sort Buckets",
+        desc: "Sort each individual bucket using Insertion Sort.",
+      },
+      {
+        num: 4,
+        title: "Gather & Join",
+        desc: "Concatenate all sorted buckets sequentially.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "scatter",
+        colorClass: "bg-indigo-500 text-white",
+        badge: "Indigo Distribution",
+        title: "Scatter into Range Buckets",
+        meaning: "Distributes numbers into their interval buckets.",
+        why: "Divides the global value domain into smaller contiguous numerical intervals.",
+      },
+      {
+        event: "bucket_sort",
+        colorClass: "bg-pink-500 text-white",
+        badge: "Pink Inner Sort",
+        title: "Sorting Local Bucket",
+        meaning: "Sorts the elements inside an individual bucket.",
+        why: "Because buckets contain few elements on average, inner sort is extremely fast.",
+      },
+      {
+        event: "gather",
+        colorClass: "bg-emerald-500 text-white",
+        badge: "Green Concatenation",
+        title: "Concatenating Sorted Buckets",
+        meaning: "Joins sorted buckets into the final array.",
+        why: "Since bucket ranges are disjoint and ordered, simple concatenation yields a sorted list.",
+      },
+    ],
+    invariants: [
+      "For all i < j, every element in Bucket[i] is <= every element in Bucket[j].",
+      "Runs in O(n) average linear time on uniform distributions.",
+    ],
     pseudocode: [
-      "bucketSort(arr):",
-      "  buckets = list of empty buckets",
-      "  for x in arr: insert x into bucket[f(x)]",
-      "  for b in buckets: sort(b)",
-      "  concatenate(buckets) into arr"
-    ]
+      "procedure bucketSort(A, k)",
+      "  buckets = array of k empty lists",
+      "  for each x in A do: insert x into buckets[floor(k * (x - min) / range)]",
+      "  for each bucket in buckets do: sort(bucket)",
+      "  return concatenate(buckets)",
+      "end procedure",
+    ],
   },
   shell: {
     name: "Shell Sort",
-    timeBest: "O(n log n)",
-    timeAvg: "O(n^1.5)",
+    category: "Diminishing Gap Insertion Sort",
+    tagline: "Optimized insertion sort comparing distant elements across decreasing gap intervals.",
+    description:
+      "Shell Sort compares and swaps elements separated by a decreasing gap sequence (such as floor(n/2), floor(n/4)... down to 1). This allows distant inversions to be eliminated early with massive leaps. By the time gap = 1 is reached, standard insertion sort finishes in nearly linear time.",
+    realWorldAnalogy:
+      "Raking a gravel driveway: use a coarse rake to move big rocks first, then a medium rake, and finish with a smooth broom.",
+    step1_goal:
+      "Eliminate large inversions early by comparing elements separated by decreasing gap distances before doing a final gap=1 pass.",
+    step1_analogy:
+      "Raking gravel: first use a wide-toothed rake to move large rocks into general regions, then switch to fine-toothed rakes to finish.",
+    step1_miniBefore: [89, 45, 68, 12],
+    step1_miniAction:
+      "Gap = 2 ➔ Compares distant elements (89 vs 68, 45 vs 12) ➔ Swaps leap over neighbors ➔ Reduces gap to 1!",
+    step1_miniAfter: [68, 12, 89, 45],
+    step2_decisionTitle: "Interleaved Gapped Comparator",
+    step2_decisionRule: "While j >= gap and array[j - gap] > temp  ➔  array[j] = array[j - gap]",
+    step2_actionType: "Long-Range Gapped Shifts",
+    step2_howItDecides:
+      "Performs insertion sort across interleaved sub-sequences separated by the active gap distance, allowing elements to take huge leaps across the array.",
+    timeBest: "O(n log n) - Gap Dependent",
+    timeAvg: "O(n^1.3 - n^1.5)",
     timeWorst: "O(n²)",
-    space: "O(1)",
-    description: "An extension of insertion sort that allows comparing and swapping elements that are far apart using a diminishing gap size.",
+    space: "O(1) - In-Place Exchange",
+    stable: false,
+    inPlace: true,
+    step3_bestTitle: "Optimal Gap Sequences",
+    step3_bestDetails:
+      "Using Sedgewick or Ciura gap sequences yields Best & Average case times of O(n log n) to O(n^1.25).",
+    step3_worstTitle: "Adversarial Patterns with N/2^k",
+    step3_worstDetails:
+      "With Shell's original N/2^k sequence, worst case is O(n²) when even and odd positions remain uncompared until gap = 1.",
+    whyBest:
+      "Optimal gap sequences prevent repeated comparisons of same elements.",
+    whyWorst:
+      "Occurs on adversarial patterns with power-of-two gap sequences.",
+    whySpace:
+      "Operates directly in the input array in O(1) space.",
+    processSteps: [
+      {
+        num: 1,
+        title: "Initialize Gap",
+        desc: "Set initial gap distance (typically gap = floor(n / 2)).",
+      },
+      {
+        num: 2,
+        title: "Gapped Insertion",
+        desc: "Perform insertion sort on elements separated by gap distance.",
+      },
+      {
+        num: 3,
+        title: "Diminish Gap",
+        desc: "Reduce gap sequence (gap = floor(gap / 2)) and repeat passes.",
+      },
+      {
+        num: 4,
+        title: "Final Pass (gap = 1)",
+        desc: "Complete standard insertion sort on nearly-sorted array in linear time.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "gap_arch",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Arch Curve",
+        title: "Distant Gap Arch Comparison",
+        meaning: "Draws an arch curve connecting indices separated by the active gap.",
+        why: "Visualizes comparisons leaping over distant elements to eliminate large inversions.",
+      },
+      {
+        event: "gap_group",
+        colorClass: "bg-pink-500 text-white",
+        badge: "Colored Gap Groups",
+        title: "Interleaved Gap Subarrays",
+        meaning: "Bars belonging to the same modulo group share distinct colors.",
+        why: "Shows how the array is partitioned into independent interleaved sequences.",
+      },
+      {
+        event: "gap_swap",
+        colorClass: "bg-rose-500 text-white",
+        badge: "Rose Swap",
+        title: "Long-Range Shift",
+        meaning: "Swaps distant elements separated by gap.",
+        why: "Moves misplaced elements across large distances in a single operation.",
+      },
+    ],
+    invariants: [
+      "An array that is k-sorted remains k-sorted after subsequent h-sorting passes.",
+      "The final gap=1 pass is guaranteed to fully sort the array.",
+    ],
     pseudocode: [
-      "shellSort(arr):",
-      "  for gap = n\u002f2 down to 1:",
-      "    for i from gap to n-1:",
-      "      temp = arr[i]",
-      "      for j = i down to gap by step gap:",
-      "        if arr[j-gap] > temp: arr[j] = arr[j-gap]",
-      "        else: break",
-      "      arr[j] = temp"
-    ]
-  },
-  tim: {
-    name: "Tim Sort",
-    timeBest: "O(n)",
-    timeAvg: "O(n log n)",
-    timeWorst: "O(n log n)",
-    space: "O(n)",
-    description: "A hybrid sorting algorithm derived from Merge Sort and Insertion Sort. It finds runs of elements that are already sorted, and sorts them further using Insertion Sort, then merges them using Merge Sort.",
-    pseudocode: [
-      "timSort(arr):",
-      "  for i from 0 to n by RUN_SIZE:",
-      "    insertionSort(arr, i, min(i+RUN_SIZE, n))",
-      "  for size = RUN_SIZE; size < n; size = 2*size:",
-      "    for left from 0 to n by 2*size:",
-      "      merge(arr, left, left+size, min(left+2*size, n))"
-    ]
+      "procedure shellSort(A)",
+      "  n = length(A)",
+      "  for gap = floor(n/2) down to 1 by gap/2 do:",
+      "    for i = gap to n - 1 do:",
+      "      temp = A[i]",
+      "      j = i",
+      "      while j >= gap and A[j - gap] > temp do: A[j] = A[j - gap]; j -= gap",
+      "      A[j] = temp",
+      "    end for",
+      "  end for",
+      "end procedure",
+    ],
   },
   timsort: {
     name: "Tim Sort",
-    timeBest: "O(n)",
-    timeAvg: "O(n log n)",
-    timeWorst: "O(n log n)",
-    space: "O(n)",
-    description: "A hybrid sorting algorithm derived from Merge Sort and Insertion Sort. It finds runs of elements that are already sorted, and sorts them further using Insertion Sort, then merges them using Merge Sort.",
+    category: "Adaptive Natural Merge Hybrid",
+    tagline: "Production hybrid finding natural sorted runs, extending them with insertion sort, and merging.",
+    description:
+      "TimSort is a real-world hybrid algorithm derived from Merge Sort and Insertion Sort. It scans for preexisting sorted sequences ('natural runs'), extends short runs with Binary Insertion Sort up to minRun size, pushes runs onto a merge stack, and merges them using balanced stack invariants in optimal O(n log n) time.",
+    realWorldAnalogy:
+      "Organizing cards that were already partly sorted: recognize the existing sorted streaks, fix small imperfections with insertion sort, and merge the streaks together.",
+    step1_goal:
+      "Exploit natural sorted runs in real-world data, extend short runs with Insertion Sort, and merge them with a balanced stack.",
+    step1_analogy:
+      "Sorting cards that already have small sorted sequences: instead of shuffling, you preserve the streaks and merge them efficiently.",
+    step1_miniBefore: [10, 20, 30, 5, 15, 25],
+    step1_miniAction:
+      "Identifies Run A [10, 20, 30] and Run B [5, 15, 25] ➔ Merges them using galloping mode ➔ [5, 10, 15, 20, 25, 30]!",
+    step1_miniAfter: [5, 10, 15, 20, 25, 30],
+    step2_decisionTitle: "Stack Balance & Galloping Comparator",
+    step2_decisionRule: "Enforce Run[i-2] > Run[i-1] + Run[i]  and  Run[i-1] > Run[i]",
+    step2_actionType: "Natural Run Merging & Galloping",
+    step2_howItDecides:
+      "TimSort inspects natural run directions. When merging, if one run consistently wins comparisons, it switches to exponential galloping mode to leap over elements.",
+    timeBest: "O(n) - Linear on Partially Sorted Data",
+    timeAvg: "O(n log n) - Guaranteed",
+    timeWorst: "O(n log n) - Optimal Comparison Bound",
+    space: "O(n) - Merge Buffer & Stack",
+    stable: true,
+    inPlace: false,
+    step3_bestTitle: "Partially or Fully Sorted Input",
+    step3_bestDetails:
+      "Detects sorted runs in a single linear scan of n comparisons and finishes in O(n) time.",
+    step3_worstTitle: "Guaranteed O(n log n) Bound",
+    step3_worstDetails:
+      "Maintains strict O(n log n) comparisons through balanced stack invariants that prevent unbalanced merge cascades.",
+    whyBest:
+      "Single linear scan detects natural runs in O(n) time.",
+    whyWorst:
+      "Balanced stack invariants guarantee O(n log n) comparisons.",
+    whySpace:
+      "Requires temporary merge buffer of size min(len(A), len(B)).",
+    processSteps: [
+      {
+        num: 1,
+        title: "Compute MinRun",
+        desc: "Calculate minRun size such that n/minRun is slightly less than a power of 2.",
+      },
+      {
+        num: 2,
+        title: "Scan Natural Runs",
+        desc: "Scan array for contiguous increasing or strictly decreasing runs.",
+      },
+      {
+        num: 3,
+        title: "Binary Insertion Extend",
+        desc: "If run is shorter than minRun, extend it with Binary Insertion Sort.",
+      },
+      {
+        num: 4,
+        title: "Push to Merge Stack",
+        desc: "Push run to stack and enforce balanced merge stack invariants.",
+      },
+      {
+        num: 5,
+        title: "Galloping Merge",
+        desc: "Merge adjacent runs using galloping exponential search.",
+      },
+    ],
+    visualizerGuide: [
+      {
+        event: "run_segment",
+        colorClass: "bg-pink-500 text-white",
+        badge: "Pink Run Tracker",
+        title: "Detected Natural Run",
+        meaning: "Highlights contiguous run chunks and their start/end indices.",
+        why: "Exploits existing sorted patterns in real-world data for O(n) performance.",
+      },
+      {
+        event: "run_insertion",
+        colorClass: "bg-amber-400 text-slate-950",
+        badge: "Amber Insertion Sort",
+        title: "Short Run Padding",
+        meaning: "Performs insertion sort within the active run segment.",
+        why: "Brings short runs up to minimum size with low constant overhead.",
+      },
+      {
+        event: "run_merge",
+        colorClass: "bg-violet-500 text-white",
+        badge: "Violet Merge Pass",
+        title: "Two-Way Run Merging",
+        meaning: "Merges two adjacent runs together.",
+        why: "Combines sorted segments into larger sorted chunks.",
+      },
+    ],
+    invariants: [
+      "Stack Balance: Run[i-2] > Run[i-1] + Run[i] and Run[i-1] > Run[i].",
+      "Switches to galloping mode after 7 consecutive wins from one subarray.",
+    ],
     pseudocode: [
-      "timSort(arr):",
-      "  for i from 0 to n by RUN_SIZE:",
-      "    insertionSort(arr, i, min(i+RUN_SIZE, n))",
-      "  for size = RUN_SIZE; size < n; size = 2*size:",
-      "    for left from 0 to n by 2*size:",
-      "      merge(arr, left, left+size, min(left+2*size, n))"
-    ]
-  }
+      "procedure timSort(A)",
+      "  n = length(A)",
+      "  minRun = computeMinRun(n)",
+      "  for i = 0 to n - 1 by minRun do: insertionSort(A, i, min(i + minRun - 1, n - 1))",
+      "  for size = minRun; size < n; size = 2 * size do:",
+      "    for left = 0 to n - 1 by 2 * size do:",
+      "      mid = min(left + size - 1, n - 1)",
+      "      right = min(left + 2 * size - 1, n - 1)",
+      "      if mid < right then merge(A, left, mid, right)",
+      "    end for",
+      "  end for",
+      "end procedure",
+    ],
+  },
 };
+
+// Backwards compatibility alias for ALGO_METADATA and CONCEPTUAL_WALKTHROUGHS
+const ALGO_METADATA: Record<
+  string,
+  {
+    name: string;
+    timeBest: string;
+    timeAvg: string;
+    timeWorst: string;
+    space: string;
+    description: string;
+    pseudocode: string[];
+  }
+> = Object.fromEntries(
+  Object.entries(ALGO_GUIDES).map(([k, v]) => [
+    k,
+    {
+      name: v.name,
+      timeBest: v.timeBest,
+      timeAvg: v.timeAvg,
+      timeWorst: v.timeWorst,
+      space: v.space,
+      description: v.description,
+      pseudocode: v.pseudocode,
+    },
+  ])
+);
+
+const CONCEPTUAL_WALKTHROUGHS: Record<string, string> = Object.fromEntries(
+  Object.entries(ALGO_GUIDES).map(([k, v]) => [k, v.tagline])
+);
 
 const ALGO_LEGENDS: Record<string, Array<{ color: string; label: string }>> = {
   bubble: [
-    { color: "bg-amber-400 border-amber-400", label: "Comparing" },
-    { color: "bg-rose-500 border-rose-500", label: "Swapping" },
-    { color: "bg-indigo-500/20 border-indigo-500/40", label: "Active" },
-  ],
-  bubblesort: [
     { color: "bg-amber-400 border-amber-400", label: "Comparing" },
     { color: "bg-rose-500 border-rose-500", label: "Swapping" },
     { color: "bg-indigo-500/20 border-indigo-500/40", label: "Active" },
@@ -250,40 +1360,17 @@ const ALGO_LEGENDS: Record<string, Array<{ color: string; label: string }>> = {
     { color: "bg-rose-500 border-rose-500", label: "Min Candidate" },
     { color: "bg-emerald-500/20 border-emerald-500/40", label: "Sorted" },
   ],
-  selectionsort: [
-    { color: "bg-amber-400 border-amber-400", label: "Comparing" },
-    { color: "bg-rose-500 border-rose-500", label: "Min Candidate" },
-    { color: "bg-emerald-500/20 border-emerald-500/40", label: "Sorted" },
-  ],
   insertion: [
-    { color: "bg-amber-400 border-amber-400", label: "Comparing" },
-    { color: "bg-rose-500 border-rose-500", label: "Displaced" },
-    { color: "bg-purple-500 border-purple-500", label: "Key Element" },
-  ],
-  insertionsort: [
     { color: "bg-amber-400 border-amber-400", label: "Comparing" },
     { color: "bg-rose-500 border-rose-500", label: "Displaced" },
     { color: "bg-purple-500 border-purple-500", label: "Key Element" },
   ],
   merge: [
     { color: "bg-amber-400/30 border-amber-400/40 text-amber-300", label: "Comparing" },
-    { color: "bg-rose-500/30 border-rose-500/40 text-rose-300", label: "Swapped/Merged" },
+    { color: "bg-rose-500/30 border-rose-500/40 text-rose-300", label: "Merged" },
     { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Active Bounds" },
-    { color: "border-indigo-500 bg-indigo-500/5 text-indigo-300", label: "Stack" },
-  ],
-  mergesort: [
-    { color: "bg-amber-400/30 border-amber-400/40 text-amber-300", label: "Comparing" },
-    { color: "bg-rose-500/30 border-rose-500/40 text-rose-300", label: "Swapped/Merged" },
-    { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Active Bounds" },
-    { color: "border-indigo-500 bg-indigo-500/5 text-indigo-300", label: "Stack" },
   ],
   quick: [
-    { color: "bg-amber-400 border-amber-400", label: "Comparing" },
-    { color: "bg-rose-500 border-rose-500", label: "Swapping" },
-    { color: "bg-cyan-400 border-cyan-400 text-slate-950", label: "Pivot" },
-    { color: "border-indigo-500 bg-indigo-500/10", label: "Partition Bounds" },
-  ],
-  quicksort: [
     { color: "bg-amber-400 border-amber-400", label: "Comparing" },
     { color: "bg-rose-500 border-rose-500", label: "Swapping" },
     { color: "bg-cyan-400 border-cyan-400 text-slate-950", label: "Pivot" },
@@ -295,18 +1382,7 @@ const ALGO_LEGENDS: Record<string, Array<{ color: string; label: string }>> = {
     { color: "bg-emerald-500/20 border-emerald-500/40", label: "Sorted Region" },
     { color: "bg-slate-900 border-indigo-500/50", label: "Heap Root" },
   ],
-  heapsort: [
-    { color: "bg-amber-400 border-amber-400", label: "Comparing" },
-    { color: "bg-rose-500 border-rose-500", label: "Swapping" },
-    { color: "bg-emerald-500/20 border-emerald-500/40", label: "Sorted Region" },
-    { color: "bg-slate-900 border-indigo-500/50", label: "Heap Root" },
-  ],
   counting: [
-    { color: "bg-amber-400/20 border-amber-400", label: "Frequency Tally" },
-    { color: "bg-indigo-500/20 border-indigo-500", label: "Prefix Accumulator" },
-    { color: "bg-emerald-500/20 border-emerald-500", label: "Sorted Output" },
-  ],
-  countingsort: [
     { color: "bg-amber-400/20 border-amber-400", label: "Frequency Tally" },
     { color: "bg-indigo-500/20 border-indigo-500", label: "Prefix Accumulator" },
     { color: "bg-emerald-500/20 border-emerald-500", label: "Sorted Output" },
@@ -315,15 +1391,7 @@ const ALGO_LEGENDS: Record<string, Array<{ color: string; label: string }>> = {
     { color: "bg-amber-400/20 border-amber-400", label: "Digit Scan" },
     { color: "bg-indigo-500/20 border-indigo-500", label: "Bucket Dist" },
   ],
-  radixsort: [
-    { color: "bg-amber-400/20 border-amber-400", label: "Digit Scan" },
-    { color: "bg-indigo-500/20 border-indigo-500", label: "Bucket Dist" },
-  ],
   bucket: [
-    { color: "bg-indigo-500/20 border-indigo-500/40", label: "Raw Range" },
-    { color: "bg-pink-500/20 border-pink-500/40", label: "Distributed Buckets" },
-  ],
-  bucketsort: [
     { color: "bg-indigo-500/20 border-indigo-500/40", label: "Raw Range" },
     { color: "bg-pink-500/20 border-pink-500/40", label: "Distributed Buckets" },
   ],
@@ -331,23 +1399,13 @@ const ALGO_LEGENDS: Record<string, Array<{ color: string; label: string }>> = {
     { color: "border-pink-500/50 text-pink-300", label: "Active Gap Group" },
     { color: "bg-amber-400 border-amber-400", label: "Interleaved Compares" },
   ],
-  shellsort: [
-    { color: "border-pink-500/50 text-pink-300", label: "Active Gap Group" },
-    { color: "bg-amber-400 border-amber-400", label: "Interleaved Compares" },
-  ],
-  tim: [
-    { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Active Run Bounds" },
-    { color: "bg-amber-400 border-amber-400", label: "Insertion Compare" },
-    { color: "bg-rose-500 border-rose-500", label: "Insertion Swap/Shift" },
-    { color: "border-indigo-500 bg-indigo-500/10 text-indigo-300", label: "Merge Active" }
-  ],
   timsort: [
-    { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Active Run Bounds" },
+    { color: "border-pink-500 bg-pink-500/10 text-pink-300", label: "Run Bounds" },
     { color: "bg-amber-400 border-amber-400", label: "Insertion Compare" },
-    { color: "bg-rose-500 border-rose-500", label: "Insertion Swap/Shift" },
-    { color: "border-indigo-500 bg-indigo-500/10 text-indigo-300", label: "Merge Active" }
+    { color: "bg-rose-500 border-rose-500", label: "Insertion Shift" },
   ],
 };
+
 
 const getActivePseudocodeLine = (algo: string, eventType: string): number => {
   const a = algo.toLowerCase();
@@ -433,33 +1491,52 @@ function SortMentorContent() {
   const searchParams = useSearchParams();
   const { user, idToken, loading: authLoading, settings } = useAuthStore();
 
-  // Zustand State
   const {
-    array, originalArray, algorithm, steps, currentStepIndex, isPlaying, speed, metrics,
-    battleMode, algorithm2, steps2, currentStepIndex2, metrics2,
-    setArray, setOriginalArray, setAlgorithm, setAlgorithm2, setSteps, setSteps2,
-    setCurrentStepIndex, setCurrentStepIndex2, setIsPlaying, setSpeed, setMetrics, setMetrics2,
-    setBattleMode, resetPlayback
+    array,
+    originalArray,
+    algorithm,
+    steps,
+    currentStepIndex,
+    isPlaying,
+    speed,
+    metrics,
+    battleMode,
+    algorithm2,
+    steps2,
+    currentStepIndex2,
+    metrics2,
+    setArray,
+    setOriginalArray,
+    setAlgorithm,
+    setAlgorithm2,
+    setSteps,
+    setSteps2,
+    setCurrentStepIndex,
+    setCurrentStepIndex2,
+    setIsPlaying,
+    setSpeed,
+    setMetrics,
+    setMetrics2,
+    setBattleMode,
+    resetPlayback,
   } = useSortStore();
 
-  // Core Configurations
   const [arraySize, setArraySize] = useState(12);
   const [presetType, setPresetType] = useState("random");
   const [isLoadingVisuals, setIsLoadingVisuals] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
 
-  // Visualizer Layout state
   const [zoom, setZoom] = useState<number>(1);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [isExplanationOpen, setIsExplanationOpen] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<"intro" | "visualizer">("intro");
+  const [guidedStep, setGuidedStep] = useState<1 | 2 | 3>(1);
+  const [introTab, setIntroTab] = useState<"process" | "visualizer_guide" | "complexity" | "code">("process");
   const [isConfigCollapsed, setIsConfigCollapsed] = useState<boolean>(false);
   const visualizerCardRef = useRef<HTMLDivElement>(null);
   const [hoveredStepIdx, setHoveredStepIdx] = useState<number | null>(null);
   const [tooltipX, setTooltipX] = useState<number>(0);
 
-  // Chat Panel State
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatWidth, setChatWidth] = useState(380);
   const [tutorMessage, setTutorMessage] = useState("");
   const [isTutorThinking, setIsTutorThinking] = useState(false);
@@ -469,69 +1546,85 @@ function SortMentorContent() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitleText, setEditTitleText] = useState("");
 
-  // Custom User Input Array State
   const [customArrayText, setCustomArrayText] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Drag resizing ref
   const resizerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const playTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isDraggingRef = useRef(false);
 
-  // Speed mapping (display vs logic delay)
   const displaySpeed = 1550 - speed;
-
   const algoParam = searchParams ? searchParams.get("algorithm") : null;
 
-  // Save conversations to LocalStorage
-  const saveConversations = (updated: Conversation[]) => {
+  const saveConversations = useCallback((updated: Conversation[]) => {
     setConversations(updated);
     if (typeof window !== "undefined") {
       localStorage.setItem("sortmentor_conversations", JSON.stringify(updated));
     }
-  };
+  }, []);
 
-  const createEmptyChat = () => {
+  const createEmptyChat = useCallback(() => {
     const newChat: Conversation = {
       id: Math.random().toString(36).substring(7),
-      title: `Session: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      title: `Session: ${new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`,
       messages: [
         {
           sender: "ai",
-          text: "Welcome! I am SortMentor. Choose an algorithm, generate a dataset, and let's explore how it performs step-by-step!",
-          timestamp: new Date().toLocaleTimeString()
-        }
+          text: "Welcome! Ask any question about sorting states, comparisons, or algorithmic complexity.",
+          timestamp: new Date().toLocaleTimeString(),
+        },
       ],
       isPinned: false,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
-    const list = [newChat, ...conversations];
-    saveConversations(list);
+    setConversations((prev) => {
+      const list = [newChat, ...prev];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sortmentor_conversations", JSON.stringify(list));
+      }
+      return list;
+    });
     setActiveChatId(newChat.id);
-  };
+  }, []);
 
   const activeConversation = useMemo(() => {
-    return conversations.find(c => c.id === activeChatId);
+    return conversations.find((c) => c.id === activeChatId);
   }, [conversations, activeChatId]);
 
-  // Generation presets helpers
-  const generateNewArray = () => {
+  const generateNewArray = useCallback(() => {
     setIsPlaying(false);
     resetPlayback();
 
     let newArr: number[] = [];
     if (presetType === "random") {
-      newArr = Array.from({ length: arraySize }, () => Math.floor(Math.random() * 80) + 10);
+      newArr = Array.from(
+        { length: arraySize },
+        () => Math.floor(Math.random() * 80) + 10
+      );
     } else if (presetType === "sorted") {
-      newArr = Array.from({ length: arraySize }, (_, i) => Math.floor((i / arraySize) * 80) + 15);
+      newArr = Array.from(
+        { length: arraySize },
+        (_, i) => Math.floor((i / arraySize) * 80) + 15
+      );
     } else if (presetType === "reversed") {
-      newArr = Array.from({ length: arraySize }, (_, i) => Math.floor(((arraySize - i) / arraySize) * 80) + 15);
+      newArr = Array.from(
+        { length: arraySize },
+        (_, i) => Math.floor(((arraySize - i) / arraySize) * 80) + 15
+      );
     } else if (presetType === "duplicates") {
       const base = [15, 30, 45, 60, 75];
-      newArr = Array.from({ length: arraySize }, () => base[Math.floor(Math.random() * base.length)]);
+      newArr = Array.from(
+        { length: arraySize },
+        () => base[Math.floor(Math.random() * base.length)]
+      );
     } else if (presetType === "nearly_sorted") {
-      newArr = Array.from({ length: arraySize }, (_, i) => Math.floor((i / arraySize) * 80) + 15);
-      // Swap 1 or 2 adjacent pairs
+      newArr = Array.from(
+        { length: arraySize },
+        (_, i) => Math.floor((i / arraySize) * 80) + 15
+      );
       if (newArr.length > 5) {
         const swapIdx = Math.floor(newArr.length / 2);
         const temp = newArr[swapIdx];
@@ -547,7 +1640,18 @@ function SortMentorContent() {
     setSteps2([]);
     setMetrics(null);
     setMetrics2(null);
-  };
+  }, [
+    arraySize,
+    presetType,
+    resetPlayback,
+    setArray,
+    setMetrics,
+    setMetrics2,
+    setOriginalArray,
+    setIsPlaying,
+    setSteps,
+    setSteps2,
+  ]);
 
   const shuffleArray = () => {
     setIsPlaying(false);
@@ -566,15 +1670,25 @@ function SortMentorContent() {
     setMetrics2(null);
   };
 
-  const jumpToStep = (idx: number) => {
-    setIsPlaying(false);
-    if (idx >= 0 && idx < steps.length) {
-      setCurrentStepIndex(idx);
-    }
-    if (battleMode && idx >= 0 && idx < steps2.length) {
-      setCurrentStepIndex2(idx);
-    }
-  };
+  const jumpToStep = useCallback(
+    (idx: number) => {
+      setIsPlaying(false);
+      if (idx >= 0 && idx < steps.length) {
+        setCurrentStepIndex(idx);
+      }
+      if (battleMode && idx >= 0 && idx < steps2.length) {
+        setCurrentStepIndex2(idx);
+      }
+    },
+    [
+      steps.length,
+      steps2.length,
+      battleMode,
+      setCurrentStepIndex,
+      setCurrentStepIndex2,
+      setIsPlaying,
+    ]
+  );
 
   const handleTimelineMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (steps.length === 0) return;
@@ -586,80 +1700,69 @@ function SortMentorContent() {
     setTooltipX(x);
   };
 
-  // --- EFFECT HOOKS ---
-
-  // Handle URL Query Parameter sync (e.g. ?algorithm=quick)
   useEffect(() => {
     if (algoParam) {
       const sanitized = algoParam.replace("-sort", "").toLowerCase();
-      const validAlgos = ["bubble", "selection", "insertion", "merge", "quick", "heap", "counting", "radix", "bucket", "shell", "tim"];
+      const validAlgos = [
+        "bubble",
+        "selection",
+        "insertion",
+        "merge",
+        "quick",
+        "heap",
+        "counting",
+        "radix",
+        "bucket",
+        "shell",
+        "timsort",
+      ];
       if (validAlgos.includes(sanitized)) {
-        setTimeout(() => {
-          setAlgorithm(sanitized);
-          setViewMode("visualizer");
-        }, 0);
+        setAlgorithm(sanitized);
+        setViewMode("intro");
+        setIsPlaying(false);
+        setSteps([]);
+        setCurrentStepIndex(0);
       }
     }
-  }, [algoParam, setAlgorithm]);
+  }, [algoParam, setAlgorithm, setSteps, setCurrentStepIndex, setIsPlaying]);
 
-  // Initialize or fetch conversation history from LocalStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("sortmentor_conversations");
       if (stored) {
         try {
           const parsed = JSON.parse(stored) as Conversation[];
-          setTimeout(() => {
+          if (parsed && parsed.length > 0) {
             setConversations(parsed);
-            if (parsed.length > 0) {
-              // Find active chat or default to first
-              setActiveChatId(parsed[0].id);
-            } else {
-              createEmptyChat();
-            }
-          }, 0);
-        } catch (e) {
-          console.error("Failed parsing conversations", e);
-          setTimeout(() => {
+            setActiveChatId(parsed[0].id);
+          } else {
             createEmptyChat();
-          }, 0);
+          }
+        } catch {
+          createEmptyChat();
         }
       } else {
-        setTimeout(() => {
-          createEmptyChat();
-        }, 0);
+        createEmptyChat();
       }
     }
-  }, []);
+  }, [createEmptyChat]);
 
-  // Auth Protection
   useEffect(() => {
     if (!user && !authLoading) {
       router.push("/");
     }
   }, [user, authLoading, router]);
 
-  // Reset viewMode when algorithm changes
   useEffect(() => {
-    setTimeout(() => {
-      setViewMode("intro");
-    }, 0);
-  }, [algorithm]);
+    generateNewArray();
+  }, [arraySize, presetType, generateNewArray]);
 
-  // Generate initial dataset when preset/size change
-  useEffect(() => {
-    setTimeout(() => {
-      generateNewArray();
-    }, 0);
-  }, [arraySize, presetType]);
-
-  // Sync default speed settings
   useEffect(() => {
     if (settings?.defaultSpeed) {
       const speedMap: Record<string, number> = {
         slow: 350,
         normal: 150,
-        fast: 50
+        fast: 50,
       };
       const targetSpeed = speedMap[settings.defaultSpeed];
       if (targetSpeed !== undefined) {
@@ -668,46 +1771,46 @@ function SortMentorContent() {
     }
   }, [settings?.defaultSpeed, setSpeed]);
 
-  // Auto-scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation?.messages, isTutorThinking]);
 
-  // Synchronous auto-playback step loop
   useEffect(() => {
-    if (isPlaying) {
-      const runStep = () => {
-        if (!battleMode) {
-          if (currentStepIndex < steps.length - 1) {
-            setCurrentStepIndex(currentStepIndex + 1);
-            playTimerRef.current = setTimeout(runStep, speed);
-          } else {
-            setIsPlaying(false);
-          }
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      if (!battleMode) {
+        if (currentStepIndex < steps.length - 1) {
+          setCurrentStepIndex(currentStepIndex + 1);
         } else {
-          const hasMore1 = currentStepIndex < steps.length - 1;
-          const hasMore2 = currentStepIndex2 < steps2.length - 1;
-
-          if (hasMore1 || hasMore2) {
-            if (hasMore1) setCurrentStepIndex(currentStepIndex + 1);
-            if (hasMore2) setCurrentStepIndex2(currentStepIndex2 + 1);
-            playTimerRef.current = setTimeout(runStep, speed);
-          } else {
-            setIsPlaying(false);
-          }
+          setIsPlaying(false);
         }
-      };
-      playTimerRef.current = setTimeout(runStep, speed);
-    } else {
-      if (playTimerRef.current) {
-        clearTimeout(playTimerRef.current);
-      }
-    }
+      } else {
+        const hasMore1 = currentStepIndex < steps.length - 1;
+        const hasMore2 = currentStepIndex2 < steps2.length - 1;
 
-    return () => {
-      if (playTimerRef.current) clearTimeout(playTimerRef.current);
-    };
-  }, [isPlaying, currentStepIndex, currentStepIndex2, steps, steps2, speed, battleMode]);
+        if (hasMore1 || hasMore2) {
+          if (hasMore1) setCurrentStepIndex(currentStepIndex + 1);
+          if (hasMore2) setCurrentStepIndex2(currentStepIndex2 + 1);
+        } else {
+          setIsPlaying(false);
+        }
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [
+    isPlaying,
+    currentStepIndex,
+    currentStepIndex2,
+    steps.length,
+    steps2.length,
+    speed,
+    battleMode,
+    setCurrentStepIndex,
+    setCurrentStepIndex2,
+    setIsPlaying,
+  ]);
 
   const applyCustomArray = () => {
     setValidationError(null);
@@ -749,15 +1852,21 @@ function SortMentorContent() {
   };
 
   const exportReplay = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
-      JSON.stringify({
-        algorithm,
-        array: originalArray,
-        steps,
-        metrics
-      }, null, 2)
-    );
-    const downloadAnchor = document.createElement('a');
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(
+        JSON.stringify(
+          {
+            algorithm,
+            array: originalArray,
+            steps,
+            metrics,
+          },
+          null,
+          2
+        )
+      );
+    const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `${algorithm}_replay.json`);
     document.body.appendChild(downloadAnchor);
@@ -770,17 +1879,18 @@ function SortMentorContent() {
     setIsLoadingVisuals(true);
     setExecutionError(null);
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     if (idToken) {
       headers["Authorization"] = `Bearer ${idToken}`;
     }
 
     try {
-      // 1. Fetch main algorithm steps
       const res = await fetch(`${API_BASE}/sortmentor/execute`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ data: originalArray, algorithm })
+        body: JSON.stringify({ data: originalArray, algorithm }),
       });
       const data = await res.json();
 
@@ -788,99 +1898,113 @@ function SortMentorContent() {
         throw new Error(data.detail || "Server error");
       }
 
-      setSteps(data.steps);
-      setMetrics(data.metrics);
+      setSteps(data.steps || []);
+      setMetrics(data.metrics || null);
       setCurrentStepIndex(0);
 
-      // 2. Fetch player 2 steps if in Battle Arena Mode
       if (battleMode) {
         const res2 = await fetch(`${API_BASE}/sortmentor/execute`, {
           method: "POST",
           headers,
-          body: JSON.stringify({ data: originalArray, algorithm: algorithm2 })
+          body: JSON.stringify({ data: originalArray, algorithm: algorithm2 }),
         });
         const data2 = await res2.json();
 
         if (!res2.ok) {
-          throw new Error(data2.detail || "Player 2 execution failed");
+          throw new Error(data2.detail || "Opponent execution failed");
         }
 
-        setSteps2(data2.steps);
-        setMetrics2(data2.metrics);
+        setSteps2(data2.steps || []);
+        setMetrics2(data2.metrics || null);
         setCurrentStepIndex2(0);
       }
 
       setIsPlaying(true);
     } catch (err) {
       console.error("Sorting execution failed", err);
-      setExecutionError("Connection failed. Please ensure backend sorting engine is active and reachable.");
+      setExecutionError(
+        "Could not connect to backend engine. Verify local backend service is active."
+      );
     } finally {
       setIsLoadingVisuals(false);
     }
   };
 
-  // Keyboard Shortcuts (Priority 11)
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Ignore keypress when typing in input/textarea fields
-    if (
-      document.activeElement?.tagName === "INPUT" ||
-      document.activeElement?.tagName === "TEXTAREA" ||
-      document.activeElement?.tagName === "SELECT"
-    ) {
-      return;
-    }
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
+        document.activeElement?.tagName === "SELECT"
+      ) {
+        return;
+      }
 
-    switch (e.code) {
-      case "Space":
-        e.preventDefault();
-        if (steps.length > 0) setIsPlaying(!isPlaying);
-        break;
-      case "ArrowLeft":
-        e.preventDefault();
-        setIsPlaying(false);
-        if (currentStepIndex > 0) {
-          setCurrentStepIndex(currentStepIndex - 1);
-          if (battleMode && currentStepIndex2 > 0) {
-            setCurrentStepIndex2(currentStepIndex2 - 1);
+      switch (e.code) {
+        case "Space":
+          e.preventDefault();
+          if (steps.length > 0) setIsPlaying(!isPlaying);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          setIsPlaying(false);
+          if (currentStepIndex > 0) {
+            setCurrentStepIndex(currentStepIndex - 1);
+            if (battleMode && currentStepIndex2 > 0) {
+              setCurrentStepIndex2(currentStepIndex2 - 1);
+            }
           }
-        }
-        break;
-      case "ArrowRight":
-        e.preventDefault();
-        setIsPlaying(false);
-        if (currentStepIndex < steps.length - 1) {
-          setCurrentStepIndex(currentStepIndex + 1);
-          if (battleMode && currentStepIndex2 < steps2.length - 1) {
-            setCurrentStepIndex2(currentStepIndex2 + 1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          setIsPlaying(false);
+          if (currentStepIndex < steps.length - 1) {
+            setCurrentStepIndex(currentStepIndex + 1);
+            if (battleMode && currentStepIndex2 < steps2.length - 1) {
+              setCurrentStepIndex2(currentStepIndex2 + 1);
+            }
           }
-        }
-        break;
-      case "KeyR":
-        e.preventDefault();
-        resetPlayback();
-        break;
-      case "Escape":
-        e.preventDefault();
-        setIsChatOpen(false);
-        setIsExplanationOpen(false);
-        break;
-    }
-  }, [isPlaying, steps, currentStepIndex, currentStepIndex2, battleMode, resetPlayback]);
+          break;
+        case "KeyR":
+          e.preventDefault();
+          resetPlayback();
+          break;
+        case "Escape":
+          e.preventDefault();
+          setIsChatOpen(false);
+          break;
+      }
+    },
+    [
+      isPlaying,
+      steps.length,
+      steps2.length,
+      currentStepIndex,
+      currentStepIndex2,
+      battleMode,
+      resetPlayback,
+      setCurrentStepIndex,
+      setCurrentStepIndex2,
+      setIsPlaying,
+    ]
+  );
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Chat Actions
   const appendMessage = (sender: "user" | "ai", text: string) => {
     if (!activeChatId) return;
-    const list = conversations.map(c => {
+    const list = conversations.map((c) => {
       if (c.id === activeChatId) {
         return {
           ...c,
-          messages: [...c.messages, { sender, text, timestamp: new Date().toLocaleTimeString() }],
-          lastUpdated: new Date().toISOString()
+          messages: [
+            ...c.messages,
+            { sender, text, timestamp: new Date().toLocaleTimeString() },
+          ],
+          lastUpdated: new Date().toISOString(),
         };
       }
       return c;
@@ -914,10 +2038,12 @@ function SortMentorContent() {
         complexity: `${meta.timeAvg} time, ${meta.space} space`,
         speed: speed,
         model: settings?.defaultLlm || "Gemini 2.5 Flash",
-        persona: settings?.preferredMentor || "Tutor"
+        persona: settings?.preferredMentor || "Tutor",
       };
 
-      const requestHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      const requestHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       if (idToken) {
         requestHeaders["Authorization"] = `Bearer ${idToken}`;
       }
@@ -925,15 +2051,20 @@ function SortMentorContent() {
       const res = await fetch(`${API_BASE}/sortmentor/explain_state`, {
         method: "POST",
         headers: requestHeaders,
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       appendMessage("ai", data.explanation);
-    } catch (err) {
+    } catch {
       setTimeout(() => {
-        appendMessage("ai", `I've analyzed the state of ${algorithm} at step ${currentStepIndex}. This state represents a ${steps[currentStepIndex]?.event_type || "initial"} event. Let me know if you need help debugging or understanding the pivot selection!`);
+        appendMessage(
+          "ai",
+          `At step ${currentStepIndex + 1}, ${algorithm} is performing a ${
+            steps[currentStepIndex]?.event_type || "state"
+          } transition.`
+        );
         setIsTutorThinking(false);
-      }, 1000);
+      }, 500);
       return;
     }
     setIsTutorThinking(false);
@@ -943,9 +2074,12 @@ function SortMentorContent() {
     const activeStep = steps[currentStepIndex];
     if (!activeStep) return;
 
+    setIsChatOpen(true);
     setIsTutorThinking(true);
     try {
-      const requestHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      const requestHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       if (idToken) {
         requestHeaders["Authorization"] = `Bearer ${idToken}`;
       }
@@ -959,13 +2093,16 @@ function SortMentorContent() {
           compare: activeStep.compare || [],
           swap: activeStep.swap || [],
           array: activeStep.array,
-          message: activeStep.message
-        })
+          message: activeStep.message,
+        }),
       });
       const data = await res.json();
       appendMessage("ai", data.explanation);
-    } catch (err) {
-      appendMessage("ai", `**Step ${currentStepIndex}**: ${activeStep.message}`);
+    } catch {
+      appendMessage(
+        "ai",
+        `**Step ${currentStepIndex + 1}**: ${activeStep.message}`
+      );
     } finally {
       setIsTutorThinking(false);
     }
@@ -973,18 +2110,18 @@ function SortMentorContent() {
 
   const clearChat = () => {
     if (!activeChatId) return;
-    const list = conversations.map(c => {
+    const list = conversations.map((c) => {
       if (c.id === activeChatId) {
         return {
           ...c,
           messages: [
             {
               sender: "ai" as const,
-              text: "Chat cleared. Welcome to SortMentor AI Tutor!",
-              timestamp: new Date().toLocaleTimeString()
-            }
+              text: "Chat cleared. Ask anything regarding the algorithm or array operations.",
+              timestamp: new Date().toLocaleTimeString(),
+            },
           ],
-          lastUpdated: new Date().toISOString()
+          lastUpdated: new Date().toISOString(),
         };
       }
       return c;
@@ -995,20 +2132,28 @@ function SortMentorContent() {
   const exportChat = () => {
     if (!activeConversation) return;
     const content = activeConversation.messages
-      .map(m => `[${m.timestamp}] ${m.sender === "user" ? "You" : "SortMentor"}: ${m.text}`)
+      .map(
+        (m) =>
+          `[${m.timestamp}] ${
+            m.sender === "user" ? "You" : "SortMentor"
+          }: ${m.text}`
+      )
       .join("\n\n");
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `chat_export_${activeConversation.title.replace(/\s+/g, "_")}.txt`;
+    link.download = `chat_export_${activeConversation.title.replace(
+      /\s+/g,
+      "_"
+    )}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const deleteConversation = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const list = conversations.filter(c => c.id !== id);
+    const list = conversations.filter((c) => c.id !== id);
     saveConversations(list);
     if (activeChatId === id) {
       if (list.length > 0) {
@@ -1021,14 +2166,18 @@ function SortMentorContent() {
 
   const togglePinConversation = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const list = conversations.map(c => {
+    const list = conversations.map((c) => {
       if (c.id === id) return { ...c, isPinned: !c.isPinned };
       return c;
     });
     saveConversations(list);
   };
 
-  const startRenameConversation = (id: string, currentTitle: string, e: React.MouseEvent) => {
+  const startRenameConversation = (
+    id: string,
+    currentTitle: string,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
     setEditingChatId(id);
     setEditTitleText(currentTitle);
@@ -1036,25 +2185,29 @@ function SortMentorContent() {
 
   const saveRenameConversation = () => {
     if (!editingChatId) return;
-    const list = conversations.map(c => {
-      if (c.id === editingChatId) return { ...c, title: editTitleText.trim() || c.title };
+    const list = conversations.map((c) => {
+      if (c.id === editingChatId)
+        return { ...c, title: editTitleText.trim() || c.title };
       return c;
     });
     saveConversations(list);
     setEditingChatId(null);
   };
 
-  // Drag handle sizing for chat sidebar
   const handleMouseDown = () => {
+    isDraggingRef.current = true;
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) return;
       const windowWidth = window.innerWidth;
       const newWidth = windowWidth - moveEvent.clientX;
-      if (newWidth >= 300 && newWidth <= 600) {
+      if (newWidth >= 280 && newWidth <= 640) {
         setChatWidth(newWidth);
       }
     };
 
     const handleMouseUp = () => {
+      isDraggingRef.current = false;
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
@@ -1063,64 +2216,48 @@ function SortMentorContent() {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  // Helper for computing auto-scaled height (Priority 1)
-  const getNormalizedHeight = (val: number) => {
-    const minVal = Math.min(...originalArray, 0);
-    const maxVal = Math.max(...originalArray, 1);
-    const range = maxVal - minVal;
-    if (range === 0) return "50%";
-    const percentage = ((val - minVal) / range) * 82 + 18; // Keep at least 18% visible height
-    return `${percentage}%`;
-  };
-
-  // Visual styling for array bars
-  const getBarColorClass = (idx: number, activeStep: SortStep | undefined) => {
-    if (!activeStep) return "bg-indigo-500/80";
-    if (activeStep.swap && activeStep.swap.includes(idx)) return "bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]";
-    if (activeStep.compare && activeStep.compare.includes(idx)) return "bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.6)]";
-    if (activeStep.pivot === idx) return "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]";
-    if (activeStep.locked_indices && activeStep.locked_indices.includes(idx)) return "bg-emerald-500/80";
-    return "bg-slate-700/50";
-  };
-
-  // Custom Markdown & Code block formatter
   const renderMarkdown = (text: string) => {
     if (!text || typeof text !== "string") return null;
     const parts = text.split("```");
     return parts.map((part, idx) => {
       if (idx % 2 === 1) {
-        // Code Block
         const lines = part.split("\n");
         const lang = lines[0].trim();
         const code = lines.slice(1).join("\n").trim();
         return (
-          <div key={idx} className="my-2 rounded-lg bg-slate-950 border border-white/5 p-3 font-mono text-[11px] overflow-x-auto text-emerald-400">
+          <div
+            key={idx}
+            className="my-2 rounded-lg bg-slate-950 border border-white/10 p-3 font-mono text-[11px] overflow-x-auto text-emerald-400"
+          >
             {lang && (
               <div className="flex justify-between items-center text-[9px] text-gray-500 uppercase font-bold mb-1 border-b border-white/5 pb-1">
                 <span>{lang}</span>
                 <span className="normal-case text-gray-600">code block</span>
               </div>
             )}
-            <pre><code>{code}</code></pre>
+            <pre>
+              <code>{code}</code>
+            </pre>
           </div>
         );
       }
 
-      // Non-code block: split by lines to handle paragraphs and lists
       const lines = part.split("\n");
       return (
         <div key={idx} className="flex flex-col gap-1.5 my-1">
           {lines.map((line, lIdx) => {
             const trimmed = line.trim();
-            if (!trimmed) return <div key={lIdx} className="h-1.5" />; // Spacer for empty lines
+            if (!trimmed) return <div key={lIdx} className="h-1.5" />;
 
-            // Format bold and inline code in a text segment
             const formatTextSegment = (txt: string) => {
               const boldParts = txt.split("**");
               return boldParts.map((bPart, bIdx) => {
                 if (bIdx % 2 === 1) {
                   return (
-                    <strong key={bIdx} className="font-bold text-white bg-white/10 px-1 rounded">
+                    <strong
+                      key={bIdx}
+                      className="font-bold text-white bg-white/10 px-1 rounded"
+                    >
                       {bPart}
                     </strong>
                   );
@@ -1129,7 +2266,10 @@ function SortMentorContent() {
                 return codeParts.map((cPart, cIdx) => {
                   if (cIdx % 2 === 1) {
                     return (
-                      <code key={cIdx} className="bg-slate-950 border border-white/10 px-1.5 py-0.5 rounded font-mono text-[10px] text-rose-300">
+                      <code
+                        key={cIdx}
+                        className="bg-slate-950 border border-white/10 px-1.5 py-0.5 rounded font-mono text-[10px] text-rose-300"
+                      >
                         {cPart}
                       </code>
                     );
@@ -1139,16 +2279,16 @@ function SortMentorContent() {
               });
             };
 
-            // Check if it's a heading (e.g. ### Title)
             if (trimmed.startsWith("#")) {
               const match = trimmed.match(/^(#{1,6})\s+(.*)$/);
               if (match) {
                 const level = match[1].length;
                 const content = match[2];
-                const sizeClass = level === 1 
-                  ? "text-sm font-extrabold text-white mt-1.5 mb-0.5 border-b border-white/5 pb-0.5" 
-                  : level === 2 
-                    ? "text-xs font-bold text-white mt-1.5 mb-0.5" 
+                const sizeClass =
+                  level === 1
+                    ? "text-sm font-extrabold text-white mt-1.5 mb-0.5 border-b border-white/5 pb-0.5"
+                    : level === 2
+                    ? "text-xs font-bold text-white mt-1.5 mb-0.5"
                     : "text-xs font-semibold text-indigo-300 mt-1";
                 return (
                   <div key={lIdx} className={sizeClass}>
@@ -1158,26 +2298,31 @@ function SortMentorContent() {
               }
             }
 
-            // Check if it is a list item (starts with "-", "*", "+", or a number like "1.")
-            const bulletMatch = trimmed.match(/^([\-\*\+]\s+|[0-9]+\.\s+)(.*)$/);
+            const bulletMatch = trimmed.match(/^([-*+]\s+|\d+\.\s+)(.*)$/);
             if (bulletMatch) {
               const prefix = bulletMatch[1];
               const content = bulletMatch[2];
-              const isNumbered = /^[0-9]/.test(prefix);
+              const isNumbered = /^\d/.test(prefix);
 
               return (
-                <div key={lIdx} className="flex items-start gap-2 pl-2 py-0.5 text-gray-300">
+                <div
+                  key={lIdx}
+                  className="flex items-start gap-2 pl-2 py-0.5 text-gray-300"
+                >
                   {isNumbered ? (
-                    <span className="font-mono text-indigo-400 font-bold select-none text-[10px] mt-0.5">{prefix}</span>
+                    <span className="font-mono text-indigo-400 font-bold select-none text-[10px] mt-0.5">
+                      {prefix}
+                    </span>
                   ) : (
                     <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
                   )}
-                  <span className="flex-1 text-xs leading-relaxed">{formatTextSegment(content)}</span>
+                  <span className="flex-1 text-xs leading-relaxed">
+                    {formatTextSegment(content)}
+                  </span>
                 </div>
               );
             }
 
-            // Normal text paragraph
             return (
               <p key={lIdx} className="text-xs leading-relaxed text-gray-300">
                 {formatTextSegment(line)}
@@ -1189,100 +2334,142 @@ function SortMentorContent() {
     });
   };
 
-  // Search filter for conversation history
   const filteredConversations = useMemo(() => {
     const term = chatSearchQuery.toLowerCase();
     return conversations
-      .filter(c => c.title.toLowerCase().includes(term) || c.messages.some(m => m.text.toLowerCase().includes(term)))
+      .filter(
+        (c) =>
+          c.title.toLowerCase().includes(term) ||
+          c.messages.some((m) => m.text.toLowerCase().includes(term))
+      )
       .sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+        return (
+          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        );
       });
   }, [conversations, chatSearchQuery]);
 
   if (authLoading || !user) return null;
 
-  // Active step values
   const activeStep = steps[currentStepIndex];
   const activeStep2 = steps2[currentStepIndex2];
 
-  // Visualizer stats computation (Priority 8)
   const stats = {
     step: steps.length > 0 ? `${currentStepIndex + 1} / ${steps.length}` : "-",
-    phase: activeStep?.event_type ? activeStep.event_type.toUpperCase() : "READY",
-    compares: steps.length > 0 ? steps.slice(0, currentStepIndex + 1).filter(s => s.event_type === "compare").length : 0,
-    swaps: steps.length > 0 ? steps.slice(0, currentStepIndex + 1).filter(s => s.event_type === "swap").length : 0,
-    pivot: activeStep?.pivot !== undefined ? activeStep.pivot : "None",
-    activeRange: activeStep?.compare ? activeStep.compare.join(", ") : "None",
+    phase: activeStep?.event_type
+      ? activeStep.event_type.toUpperCase()
+      : "READY",
+    compares:
+      steps.length > 0
+        ? steps
+            .slice(0, currentStepIndex + 1)
+            .filter((s) => s.event_type === "comparison" || s.event_type === "compare")
+            .length
+        : 0,
+    swaps:
+      steps.length > 0
+        ? steps
+            .slice(0, currentStepIndex + 1)
+            .filter((s) => s.event_type === "swap" || s.event_type === "shift")
+            .length
+        : 0,
+    pivot:
+      activeStep?.pivot !== undefined ? String(activeStep.pivot) : "None",
   };
 
   const stats2 = {
-    step: steps2.length > 0 ? `${currentStepIndex2 + 1} / ${steps2.length}` : "-",
-    phase: activeStep2?.event_type ? activeStep2.event_type.toUpperCase() : "READY",
-    compares: steps2.length > 0 ? steps2.slice(0, currentStepIndex2 + 1).filter(s => s.event_type === "compare").length : 0,
-    swaps: steps2.length > 0 ? steps2.slice(0, currentStepIndex2 + 1).filter(s => s.event_type === "swap").length : 0,
-    pivot: activeStep2?.pivot !== undefined ? activeStep2.pivot : "None",
+    step:
+      steps2.length > 0 ? `${currentStepIndex2 + 1} / ${steps2.length}` : "-",
+    phase: activeStep2?.event_type
+      ? activeStep2.event_type.toUpperCase()
+      : "READY",
+    compares:
+      steps2.length > 0
+        ? steps2
+            .slice(0, currentStepIndex2 + 1)
+            .filter((s) => s.event_type === "comparison" || s.event_type === "compare")
+            .length
+        : 0,
+    swaps:
+      steps2.length > 0
+        ? steps2
+            .slice(0, currentStepIndex2 + 1)
+            .filter((s) => s.event_type === "swap" || s.event_type === "shift")
+            .length
+        : 0,
+    pivot:
+      activeStep2?.pivot !== undefined ? String(activeStep2.pivot) : "None",
   };
 
   return (
-    <div className="h-screen bg-[#030712] flex flex-col font-sans select-none text-gray-100 overflow-hidden">
-      
-      {/* Top Header */}
-      <header className={`glass-panel py-4 px-6 flex items-center justify-between border-b border-white/5 z-20 shrink-0 ${isFullscreen ? "hidden" : "flex"}`}>
-        <div className="flex items-center gap-4">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-950 font-sans select-none text-gray-100">
+      {/* Top Main Navbar */}
+      <header
+        className={`h-14 shrink-0 bg-slate-900/60 backdrop-blur-md px-4 lg:px-6 flex items-center justify-between border-b border-white/5 z-20 ${
+          isFullscreen ? "hidden" : "flex"
+        }`}
+      >
+        <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/dashboard")}
-            className="p-1.5 rounded-lg hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 rounded-lg hover:bg-slate-800 border border-transparent hover:border-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="relative overflow-hidden flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-slate-950">
+          <div className="flex items-center gap-2.5">
+            <div className="relative overflow-hidden flex h-6 w-6 items-center justify-center rounded-lg border border-white/10 bg-slate-950">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-icon.png" alt="AlgoVerse" className="h-full w-full object-cover scale-110" />
+              <img
+                src="/logo-icon.png"
+                alt="AlgoVerse"
+                className="h-full w-full object-cover scale-110"
+              />
             </div>
-            <span className="font-bold text-lg text-white">SortMentor</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">AlgoVerse Engine</span>
+            <span className="font-bold text-base text-white">SortMentor</span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hidden sm:inline">
+              Visualizer & AI Tutor
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => setBattleMode(!battleMode)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-xs transition-all cursor-pointer border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all cursor-pointer border ${
               battleMode
                 ? "bg-gradient-to-r from-pink-500/20 to-indigo-500/20 border-indigo-500/50 text-indigo-200"
                 : "bg-slate-900/60 border-white/5 text-gray-400 hover:text-gray-200 hover:border-white/10"
             }`}
           >
-            <Swords className="h-4 w-4" />
-            Battle Arena {battleMode ? "Active" : "OFF"}
+            <Swords className="h-3.5 w-3.5" />
+            Arena {battleMode ? "Active" : "OFF"}
           </button>
           <ShareButton />
           <UserDropdown />
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden relative">
-        
-        {/* Left Side Workspace (Visualizer & Controls) */}
-        <div className="flex-1 flex flex-col p-6 gap-4 overflow-y-auto min-w-0 h-full">
-          
-          {/* Compact Settings Summary Row when collapsed */}
+        <div className="flex-1 flex flex-col min-w-0 p-3 lg:p-4 gap-3 overflow-hidden h-full">
+          {/* Top Quick Settings Bar (Collapsible) */}
           <AnimatePresence initial={false}>
             {isConfigCollapsed && !isFullscreen && (
               <motion.div
-                initial={{ height: 0, opacity: 0, y: -10 }}
+                initial={{ height: 0, opacity: 0, y: -6 }}
                 animate={{ height: "auto", opacity: 1, y: 0 }}
-                exit={{ height: 0, opacity: 0, y: -10 }}
-                className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/5 shrink-0"
+                exit={{ height: 0, opacity: 0, y: -6 }}
+                className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/5 shrink-0"
               >
                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-300 font-medium">
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                    Algorithm: <b className="text-white uppercase font-mono">{algorithm} Sort</b>
+                    Algorithm:{" "}
+                    <b className="text-white uppercase font-mono">
+                      {algorithm}
+                    </b>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
@@ -1290,43 +2477,56 @@ function SortMentorContent() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                    Preset: <b className="text-white capitalize font-mono">{presetType}</b>
+                    Preset:{" "}
+                    <b className="text-white capitalize font-mono">
+                      {presetType}
+                    </b>
                   </span>
                   {battleMode && (
                     <span className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      VS: <b className="text-white uppercase font-mono">{algorithm2} Sort</b>
+                      Opponent:{" "}
+                      <b className="text-white uppercase font-mono">
+                        {algorithm2}
+                      </b>
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => setIsConfigCollapsed(false)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] uppercase cursor-pointer select-none transition-all flex items-center gap-1.5"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] uppercase cursor-pointer select-none transition-all flex items-center gap-1"
                 >
                   <Sliders className="h-3 w-3" />
-                  Edit Settings
+                  Settings
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Algorithm Configurations Board & User Input (Collapsible) */}
+          {/* Full Configuration Control Strip */}
           <AnimatePresence initial={false}>
             {!isConfigCollapsed && !isFullscreen && (
               <motion.div
-                initial={{ height: 0, opacity: 0, y: -10 }}
+                initial={{ height: 0, opacity: 0, y: -6 }}
                 animate={{ height: "auto", opacity: 1, y: 0 }}
-                exit={{ height: 0, opacity: 0, y: -10 }}
-                className="flex flex-col gap-4 shrink-0 overflow-hidden"
+                exit={{ height: 0, opacity: 0, y: -6 }}
+                className="bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-xl p-3 flex flex-col gap-2 shrink-0"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Primary Selector */}
-                  <div className="glass-card p-4 flex flex-col gap-2">
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-indigo-400 font-bold">Algorithm</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] uppercase font-mono tracking-widest text-indigo-400 font-bold">
+                      Algorithm
+                    </span>
                     <select
                       value={algorithm}
-                      onChange={(e) => setAlgorithm(e.target.value)}
-                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                      onChange={(e) => {
+                        setAlgorithm(e.target.value);
+                        setViewMode("intro");
+                        setIsPlaying(false);
+                        setSteps([]);
+                        setCurrentStepIndex(0);
+                      }}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
                     >
                       <option value="bubble">Bubble Sort</option>
                       <option value="selection">Selection Sort</option>
@@ -1342,14 +2542,15 @@ function SortMentorContent() {
                     </select>
                   </div>
 
-                  {/* Battle Arena Selector */}
                   {battleMode && (
-                    <div className="glass-card p-4 flex flex-col gap-2 border-l-4 border-l-pink-500">
-                      <span className="text-[10px] uppercase font-mono tracking-widest text-pink-400 font-bold">Opponent (Battle Arena)</span>
+                    <div className="flex flex-col gap-1 border-l-2 border-l-pink-500 pl-2">
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-pink-400 font-bold">
+                        Opponent Algorithm
+                      </span>
                       <select
                         value={algorithm2}
                         onChange={(e) => setAlgorithm2(e.target.value)}
-                        className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-pink-500 cursor-pointer"
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg p-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500 cursor-pointer"
                       >
                         <option value="bubble">Bubble Sort</option>
                         <option value="selection">Selection Sort</option>
@@ -1366,13 +2567,14 @@ function SortMentorContent() {
                     </div>
                   )}
 
-                  {/* Presets */}
-                  <div className="glass-card p-4 flex flex-col gap-2">
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400 font-bold">Dataset Preset</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] uppercase font-mono tracking-widest text-gray-400 font-bold">
+                      Dataset Preset
+                    </span>
                     <select
                       value={presetType}
                       onChange={(e) => setPresetType(e.target.value)}
-                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
                     >
                       <option value="random">Randomize</option>
                       <option value="nearly_sorted">Nearly Sorted</option>
@@ -1382,257 +2584,781 @@ function SortMentorContent() {
                     </select>
                   </div>
 
-                  {/* Size Configuration */}
-                  <div className="glass-card p-4 flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-[10px] uppercase font-mono tracking-widest text-gray-400 font-bold">
-                      <span>Array Size</span>
-                      <span className="text-white">{arraySize}</span>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between items-center text-[9px] uppercase font-mono tracking-widest text-gray-400 font-bold">
+                      <span>Array Size: {arraySize}</span>
                     </div>
                     <input
                       type="range"
-                      min="10"
+                      min="8"
                       max="16"
                       value={arraySize}
                       onChange={(e) => setArraySize(Number(e.target.value))}
-                      className="w-full accent-indigo-500 cursor-pointer"
+                      className="w-full accent-indigo-500 cursor-pointer mt-1"
                     />
                   </div>
                 </div>
 
-                {/* User Input & Validation Bar */}
-                <div className="glass-panel p-4 rounded-xl flex flex-col gap-2">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400 font-bold">Custom Input Array</span>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={customArrayText}
-                        onChange={(e) => setCustomArrayText(e.target.value)}
-                        placeholder="e.g. 8, 3, -5, 1, 9, 2"
-                        className="w-full glass-input text-xs font-mono pr-8"
-                      />
-                      {validationError && (
-                        <div className="absolute right-2.5 top-2.5 text-rose-400" title={validationError}>
-                          <AlertCircle className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={applyCustomArray}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-white/5">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={customArrayText}
+                      onChange={(e) => setCustomArrayText(e.target.value)}
+                      placeholder="e.g. 8, 3, -5, 1, 9, 2"
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs font-mono text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 pr-8"
+                    />
+                    {validationError && (
+                      <div
+                        className="absolute right-2.5 top-1.5 text-rose-400"
+                        title={validationError}
                       >
-                        Apply
-                      </button>
-                      <button
-                        onClick={generateNewArray}
-                        className="px-3 py-2 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
-                      >
-                        Generate
-                      </button>
-                      <button
-                        onClick={shuffleArray}
-                        className="px-3 py-2 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
-                      >
-                        Shuffle
-                      </button>
-                      <button
-                        onClick={() => setIsConfigCollapsed(true)}
-                        className="px-3 py-2 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all flex items-center gap-1.5"
-                        title="Collapse Settings"
-                      >
-                        <Minimize2 className="h-3.5 w-3.5" />
-                        Collapse
-                      </button>
-                    </div>
+                        <AlertCircle className="h-3.5 w-3.5" />
+                      </div>
+                    )}
                   </div>
-                  {validationError && (
-                    <span className="text-[10px] text-rose-400 font-semibold flex items-center gap-1">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      {validationError}
-                    </span>
-                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={applyCustomArray}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      onClick={generateNewArray}
+                      className="px-2.5 py-1 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                    >
+                      Generate
+                    </button>
+                    <button
+                      onClick={shuffleArray}
+                      className="px-2.5 py-1 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                    >
+                      Shuffle
+                    </button>
+                    <button
+                      onClick={() => setIsConfigCollapsed(true)}
+                      className="px-2.5 py-1 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all flex items-center gap-1"
+                    >
+                      <Minimize2 className="h-3 w-3" />
+                      Collapse
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Core Visualizer Board Area (Priority 1) */}
-          <div className="flex-grow flex flex-col relative w-full">
-            <div className={`${battleMode ? "grid grid-cols-1 xl:grid-cols-2 gap-4" : "flex flex-col w-full"}`}>
-              
-              {/* Visualizer 1 */}
-              <div
-                ref={visualizerCardRef}
-                className={`glass-card p-5 flex flex-col relative justify-between transition-all w-full ${
-                  isFullscreen 
-                    ? "fixed inset-4 z-50 bg-slate-950/95 border-indigo-500/30" 
-                    : ""
-                }`}
-                style={{
-                  minHeight: isFullscreen ? "100%" : `${ALGO_LAYOUTS[algorithm]?.preferredHeight || 600}px`
-                }}
-              >
-                
-                {/* Header metrics */}
-                <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                    <span className="text-sm font-bold text-white uppercase font-mono">{algorithm} Sort</span>
+          {/* Unified Visualizer & Side-by-Side Explanation Area */}
+          <div
+            ref={visualizerCardRef}
+            className={`flex-1 flex flex-col min-h-0 bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden ${
+              isFullscreen
+                ? "fixed inset-0 z-50 bg-slate-950 p-4"
+                : "relative"
+            }`}
+          >
+            {/* Top Toolbar Header (Contains Playback Controls, Timeline, Zoom & Tools - only visible in visualizer/battle mode) */}
+            {(viewMode === "visualizer" || battleMode) && (
+              <div className="px-4 py-2.5 border-b border-white/5 bg-slate-950/50 flex flex-col gap-2 shrink-0">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  {/* Left: Algorithm Name & Execution Metrics */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                      <span className="text-sm font-bold text-white uppercase font-mono">
+                        {algorithm} Sort
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                        Step: <b className="text-white">{stats.step}</b>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                        Compares: <b className="text-amber-400">{stats.compares}</b>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                        Swaps: <b className="text-rose-400">{stats.swaps}</b>
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Control Actions (Zoom, Fullscreen, Export) */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* Center: Playback Controls */}
+                  <div className="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded-xl border border-white/5">
                     <button
-                      onClick={() => setViewMode(viewMode === "intro" ? "visualizer" : "intro")}
-                      className={`p-1 rounded hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer ${
-                        viewMode === "intro" ? "text-indigo-400 bg-indigo-500/10 border-indigo-500/20" : ""
+                      onClick={startSorting}
+                      disabled={isLoadingVisuals}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white disabled:opacity-40 shadow-md shadow-indigo-600/20 cursor-pointer transition-all shrink-0"
+                    >
+                      {isLoadingVisuals ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                      ) : (
+                        <Zap className="h-3 w-3" />
+                      )}
+                      Run
+                    </button>
+
+                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+                    <button
+                      onClick={() => jumpToStep(0)}
+                      disabled={steps.length === 0}
+                      className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
+                      title="Reset to Start"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        currentStepIndex > 0 && jumpToStep(currentStepIndex - 1)
+                      }
+                      disabled={currentStepIndex <= 0}
+                      className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
+                      title="Previous Step"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => steps.length > 0 && setIsPlaying(!isPlaying)}
+                      disabled={steps.length === 0}
+                      className="p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition-all"
+                      title={isPlaying ? "Pause" : "Play"}
+                    >
+                      {isPlaying ? (
+                        <Pause className="h-3.5 w-3.5" />
+                      ) : (
+                        <Play className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        currentStepIndex < steps.length - 1 &&
+                        jumpToStep(currentStepIndex + 1)
+                      }
+                      disabled={
+                        steps.length === 0 ||
+                        currentStepIndex >= steps.length - 1
+                      }
+                      className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
+                      title="Next Step"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+
+                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+                    {/* Speed slider in header */}
+                    <div className="flex items-center gap-1.5 text-[9px] font-mono text-gray-400">
+                      <span>{speed}ms</span>
+                      <input
+                        type="range"
+                        min="50"
+                        max="1500"
+                        value={displaySpeed}
+                        onChange={(e) => setSpeed(1550 - Number(e.target.value))}
+                        disabled={steps.length === 0}
+                        className="w-16 accent-indigo-500 cursor-pointer"
+                        title="Adjust playback delay"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right: Zoom, Fullscreen & Export Controls */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() =>
+                        setViewMode(viewMode === "intro" ? "visualizer" : "intro")
+                      }
+                      className={`p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white transition-all cursor-pointer ${
+                        viewMode === "intro"
+                          ? "text-indigo-400 bg-indigo-500/10"
+                          : ""
                       }`}
-                      title="Toggle Algorithm Profile Definition"
+                      title="Toggle Explanation & Guide"
                     >
-                      <HelpCircle className="h-3.5 w-3.5" />
+                      <BookOpen className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      onClick={() => setZoom(prev => Math.max(0.6, prev - 0.1))}
-                      className="p-1 rounded hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="text-[9px] font-mono text-gray-500 select-none">{Math.round(zoom * 100)}%</span>
-                    <button
-                      onClick={() => setZoom(prev => Math.min(1.4, prev + 0.1))}
-                      className="p-1 rounded hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="h-3.5 w-3.5" />
-                    </button>
+
+                    <div className="flex items-center bg-slate-900/60 rounded-lg px-1 py-0.5 border border-white/5">
+                      <button
+                        onClick={() => setZoom((prev) => Math.max(0.6, prev - 0.1))}
+                        className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                        title="Zoom Out"
+                      >
+                        <ZoomOut className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="text-[9px] font-mono text-gray-500 px-1 select-none">
+                        {Math.round(zoom * 100)}%
+                      </span>
+                      <button
+                        onClick={() => setZoom((prev) => Math.min(1.4, prev + 0.1))}
+                        className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                        title="Zoom In"
+                      >
+                        <ZoomIn className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
                     <button
                       onClick={() => setIsFullscreen(!isFullscreen)}
-                      className="p-1 rounded hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer ml-1"
-                      title="Toggle Fullscreen"
+                      className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                      title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
-                      {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                      {isFullscreen ? (
+                        <Minimize2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      )}
                     </button>
+
                     <button
                       onClick={exportReplay}
-                      className="p-1 rounded hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
                       title="Export Replay JSON"
                     >
                       <Download className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                </div>
 
-                  {metrics && (
-                    <div className="hidden sm:flex gap-3 text-[10px] font-mono text-gray-400">
-                      <span>Swaps: <b className="text-rose-400">{stats.swaps}</b></span>
-                      <span>Compares: <b className="text-amber-400">{stats.compares}</b></span>
-                      <span>Time: <b className="text-white">{metrics.time_ms.toFixed(1)}ms</b></span>
+                {/* Integrated Scrubber Bar directly under header buttons */}
+                <div
+                  className="relative flex items-center w-full group pt-1"
+                  onMouseMove={handleTimelineMouseMove}
+                  onMouseLeave={() => setHoveredStepIdx(null)}
+                >
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(0, steps.length - 1)}
+                    value={currentStepIndex}
+                    onChange={(e) => jumpToStep(Number(e.target.value))}
+                    disabled={steps.length === 0}
+                    className="w-full h-1 bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
+                  />
+
+                  {hoveredStepIdx !== null && steps[hoveredStepIdx] && (
+                    <div
+                      className="absolute top-full mt-2 bg-slate-950/95 border border-indigo-500/20 text-gray-200 text-[10px] font-sans px-2.5 py-1.5 rounded-lg shadow-2xl pointer-events-none select-none z-30 w-52 break-words -translate-x-1/2 backdrop-blur-md"
+                      style={{ left: `${tooltipX}px` }}
+                    >
+                      <div className="font-bold text-indigo-400 mb-0.5 font-mono">
+                        Step {hoveredStepIdx + 1} ({steps[hoveredStepIdx].event_type}):
+                      </div>
+                      <div className="leading-normal">
+                        {steps[hoveredStepIdx].message}
+                      </div>
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
-                {/* Dynamic Metrics display (Priority 8) */}
-                <div className="grid grid-cols-5 gap-2 py-2 bg-slate-950/40 rounded-lg px-3 border border-white/5 my-2 text-[10px] font-mono shrink-0">
-                  <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Step</span><span className="text-white font-bold">{stats.step}</span></div>
-                  <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Phase</span><span className="text-indigo-400 font-bold truncate block">{stats.phase}</span></div>
-                  <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Pivot</span><span className="text-cyan-400 font-bold">{stats.pivot}</span></div>
-                  <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Compares</span><span className="text-amber-400 font-bold">{stats.compares}</span></div>
-                  <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Swaps</span><span className="text-rose-400 font-bold">{stats.swaps}</span></div>
-                </div>
-
-                {/* Specialized Visualizer Integration */}
-                <div className="flex-grow min-h-0 flex flex-col justify-end relative overflow-hidden py-2">
-                  {viewMode === "intro" && !battleMode ? (
-                    <div className="flex-grow flex flex-col justify-center items-center text-center p-6 gap-5 max-w-2xl mx-auto h-full min-h-[300px]">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 self-center uppercase tracking-widest font-mono">
-                          Algorithm Profile
-                        </span>
-                        <h2 className="text-2xl font-extrabold text-white tracking-tight uppercase font-sans">
-                          {ALGO_METADATA[algorithm]?.name || algorithm}
-                        </h2>
-                      </div>
-
-                      <p className="text-xs text-gray-400 leading-relaxed font-medium">
-                        {ALGO_METADATA[algorithm]?.description || "Choose an algorithm and dataset to begin learning."}
-                      </p>
-
-                      {/* Conceptual Walkthrough block */}
-                      <div className="p-3.5 rounded-xl bg-slate-950/40 border border-white/5 text-left flex flex-col gap-1 w-full">
-                        <span className="text-[8px] uppercase font-mono tracking-widest text-indigo-400 font-bold">Conceptual Walkthrough</span>
-                        <p className="text-[11px] text-gray-300 leading-relaxed font-medium">
-                          {CONCEPTUAL_WALKTHROUGHS[algorithm.toLowerCase()] || "Select an algorithm to view its visual concept description."}
-                        </p>
-                      </div>
-
-                      {/* Complexity specs */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full font-mono">
-                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-white/5 flex flex-col gap-0.5">
-                          <span className="text-[7px] text-gray-500 uppercase font-bold">Best Case</span>
-                          <span className="text-[11px] font-bold text-emerald-400">{ALGO_METADATA[algorithm]?.timeBest || "-"}</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-white/5 flex flex-col gap-0.5">
-                          <span className="text-[7px] text-gray-500 uppercase font-bold">Average</span>
-                          <span className="text-[11px] font-bold text-indigo-400">{ALGO_METADATA[algorithm]?.timeAvg || "-"}</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-white/5 flex flex-col gap-0.5">
-                          <span className="text-[7px] text-gray-500 uppercase font-bold">Worst Case</span>
-                          <span className="text-[11px] font-bold text-rose-400">{ALGO_METADATA[algorithm]?.timeWorst || "-"}</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-white/5 flex flex-col gap-0.5">
-                          <span className="text-[7px] text-gray-500 uppercase font-bold">Space</span>
-                          <span className="text-[11px] font-bold text-amber-400">{ALGO_METADATA[algorithm]?.space || "-"}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={async () => {
-                          setViewMode("visualizer");
-                          setIsConfigCollapsed(true);
-                          if (steps.length === 0) {
-                            await startSorting();
-                          }
-                          setTimeout(() => {
-                            visualizerCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                          }, 100);
-                        }}
-                        className="mt-1 px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/10 hover:scale-102 active:scale-98 transition-all cursor-pointer flex items-center gap-1.5 select-none"
-                      >
-                        <Zap className="h-3.5 w-3.5 animate-pulse" />
-                        See Interactive Visualization
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Context-Aware Color Legend */}
-                      {ALGO_LEGENDS[algorithm.toLowerCase()] && (
-                        <div className="flex flex-wrap items-center gap-3 py-1.5 px-3 rounded-lg bg-slate-950/20 border border-white/5 text-[9px] font-mono text-gray-400 mb-2 shrink-0 select-none">
-                          <span className="text-gray-500 uppercase font-bold tracking-wider mr-1 font-sans">Legend:</span>
-                          {ALGO_LEGENDS[algorithm.toLowerCase()].map((item, idx) => (
-                            <span key={idx} className="flex items-center gap-1.5">
-                              <span className={`w-2 h-2 rounded-full ${item.color.split(" ")[0]}`}></span>
-                              <span>{item.label}</span>
+            {/* Main Stage: Visualizer (Left) + Integrated Explanation (Right) */}
+            <div className="flex-1 min-h-0 p-2 sm:p-4 flex flex-col overflow-hidden">
+              {viewMode === "intro" && !battleMode ? (
+                (() => {
+                  const guide = ALGO_GUIDES[algorithm.toLowerCase()] || ALGO_GUIDES.bubble;
+                  return (
+                    <div className="flex-1 min-h-0 flex flex-col justify-between overflow-y-auto w-full max-w-7xl mx-auto gap-4 p-1 sm:p-3">
+                      {/* TOP HEADER: Algorithm Profile & 3-Step Stepper Bar */}
+                      <div className="flex flex-col gap-3.5 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shrink-0 shadow-2xl">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3.5">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="w-3.5 h-3.5 rounded-full bg-indigo-500 animate-pulse shadow-lg shadow-indigo-500/50" />
+                            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight font-sans">
+                              {guide.name}
+                            </h2>
+                            <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm">
+                              {guide.category}
                             </span>
+                          </div>
+
+                          <div className="flex items-center gap-2.5 text-xs font-mono">
+                            <span
+                              className={`px-3 py-1 rounded-full border font-bold ${
+                                guide.stable
+                                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                                  : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                              }`}
+                            >
+                              {guide.stable ? "✓ Stable Sort" : "⚠ Unstable Sort"}
+                            </span>
+                            <span
+                              className={`px-3 py-1 rounded-full border font-bold ${
+                                guide.inPlace
+                                  ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-300"
+                                  : "bg-purple-500/15 border-purple-500/30 text-purple-300"
+                              }`}
+                            >
+                              {guide.inPlace ? "In-Place O(1) Aux" : "Aux Memory Required"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Stepper Progress Tabs */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          {[
+                            { num: 1, title: "Step 1: The Goal & Analogy", icon: Lightbulb },
+                            { num: 2, title: "Step 2: How It Decides (Swaps vs Shifts)", icon: Compass },
+                            { num: 3, title: "Step 3: Best & Worst Scenarios", icon: Scale },
+                          ].map((st) => (
+                            <button
+                              key={st.num}
+                              onClick={() => setGuidedStep(st.num as 1 | 2 | 3)}
+                              className={`flex items-center justify-start gap-3 p-3 rounded-xl border text-sm font-bold transition-all cursor-pointer select-none ${
+                                guidedStep === st.num
+                                  ? "bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30 ring-2 ring-indigo-400/50"
+                                  : guidedStep > st.num
+                                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                                  : "bg-slate-950/70 border-white/5 text-gray-400 hover:text-gray-200 hover:bg-slate-900"
+                              }`}
+                            >
+                              <span
+                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 shadow ${
+                                  guidedStep === st.num
+                                    ? "bg-white text-indigo-700 font-black"
+                                    : guidedStep > st.num
+                                    ? "bg-emerald-500 text-slate-950 font-black"
+                                    : "bg-slate-800 text-gray-400"
+                                }`}
+                              >
+                                {guidedStep > st.num ? "✓" : st.num}
+                              </span>
+                              <span className="truncate">{st.title}</span>
+                            </button>
                           ))}
                         </div>
-                      )}
+                      </div>
 
-                      {executionError && (
-                        <div className="mb-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium">
-                          <span className="flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
-                            {executionError}
-                          </span>
+                      {/* STEPPER BODY: Spacious Left & Right 2-Column Grid */}
+                      <div className="flex-1 min-h-0 flex flex-col justify-between bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 gap-4 overflow-y-auto shadow-2xl">
+                        {/* STEP 1: The Goal & Analogy (Side-by-Side Left & Right) */}
+                        {guidedStep === 1 && (
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                            {/* Left Column: Goal Statement & Real-World Mental Model */}
+                            <div className="lg:col-span-5 flex flex-col gap-4">
+                              {/* Mission Card */}
+                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
+                                <div className="flex items-center gap-2 text-indigo-400">
+                                  <Sparkle className="h-4 w-4" />
+                                  <span className="text-xs font-mono uppercase font-bold tracking-wider">
+                                    The Core Mission & Objective
+                                  </span>
+                                </div>
+                                <h3 className="text-lg sm:text-xl font-black text-white leading-snug">
+                                  {guide.step1_goal}
+                                </h3>
+                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
+                                  {guide.description}
+                                </p>
+                              </div>
+
+                              {/* Real-World Analogy Card */}
+                              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-indigo-500/10 to-slate-950/80 border border-amber-500/30 flex items-start gap-3.5 shadow-xl">
+                                <Lightbulb className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold">
+                                    Real-World Mental Model (Analogy)
+                                  </span>
+                                  <p className="text-sm sm:text-base text-amber-100/90 leading-relaxed font-medium">
+                                    {guide.step1_analogy}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Column: Mini Preview Graphic + Core Invariants */}
+                            <div className="lg:col-span-7 flex flex-col gap-4">
+                              {/* Mini Preview Graphic */}
+                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-4 shadow-xl">
+                                <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                                  <span className="text-xs uppercase font-mono tracking-widest text-indigo-300 font-bold">
+                                    Mini Preview: How It Begins on Sample Data
+                                  </span>
+                                  <span className="text-[11px] font-mono text-gray-400">
+                                    Initial Pass Demonstration
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-xl border border-white/5 shadow-inner">
+                                  <div className="flex flex-col items-center gap-1.5">
+                                    <span className="text-xs text-gray-400 font-mono font-bold">
+                                      Unsorted Input
+                                    </span>
+                                    <div className="flex gap-2">
+                                      {guide.step1_miniBefore.map((val, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="px-3.5 py-2 rounded-xl bg-slate-800 border border-white/10 text-sm sm:text-base font-mono font-black text-gray-100 shadow-md"
+                                        >
+                                          {val}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col items-center gap-1 text-center max-w-xs">
+                                    <span className="text-xs text-indigo-400 font-mono font-bold uppercase tracking-wider">
+                                      Algorithmic Action
+                                    </span>
+                                    <span className="text-xs sm:text-sm text-gray-200 font-medium leading-normal p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20">
+                                      {guide.step1_miniAction}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex flex-col items-center gap-1.5">
+                                    <span className="text-xs text-emerald-400 font-mono font-bold">
+                                      After Pass Result
+                                    </span>
+                                    <div className="flex gap-2">
+                                      {guide.step1_miniAfter.map((val, idx) => (
+                                        <span
+                                          key={idx}
+                                          className={`px-3.5 py-2 rounded-xl border text-sm sm:text-base font-mono font-black shadow-md ${
+                                            idx === guide.step1_miniAfter.length - 1 || idx === 0
+                                              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-emerald-500/10"
+                                              : "bg-slate-800 border-white/10 text-gray-100"
+                                          }`}
+                                        >
+                                          {val}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Invariants & Guarantees */}
+                              <div className="p-5 rounded-2xl bg-slate-950/80 border border-indigo-500/20 flex flex-col gap-3 shadow-xl">
+                                <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold flex items-center gap-2">
+                                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                                  Core Invariants & Guarantees
+                                </span>
+                                <ul className="flex flex-col gap-2 pl-1">
+                                  {guide.invariants.map((inv, idx) => (
+                                    <li
+                                      key={idx}
+                                      className="text-xs sm:text-sm text-gray-200 flex items-start gap-2.5 font-medium leading-relaxed"
+                                    >
+                                      <span className="w-2 h-2 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
+                                      <span>{inv}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STEP 2: How the Algorithm Decides (Side-by-Side Left & Right) */}
+                        {guidedStep === 2 && (
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                            {/* Left Column: Decision Comparator & Movement Logic */}
+                            <div className="lg:col-span-5 flex flex-col gap-4">
+                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-indigo-500/30 flex flex-col gap-3 shadow-xl">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-mono uppercase font-bold tracking-wider text-indigo-400">
+                                    Decision Comparator & Action
+                                  </span>
+                                  <span className="px-3 py-1 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-xs font-mono font-bold">
+                                    {guide.step2_actionType}
+                                  </span>
+                                </div>
+                                <h3 className="text-base sm:text-lg font-mono font-black text-emerald-400 p-3.5 bg-slate-900 rounded-xl border border-emerald-500/20 shadow-inner">
+                                  {guide.step2_decisionRule}
+                                </h3>
+                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
+                                  {guide.step2_howItDecides}
+                                </p>
+                              </div>
+
+                              <div className="p-5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 text-xs sm:text-sm text-gray-200 flex items-start gap-3 shadow-xl">
+                                <Compass className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
+                                <div>
+                                  <b className="text-white block mb-1 text-sm">Visualizer Movement Clues:</b>
+                                  <span>
+                                    Yellow/amber highlights indicate elements currently being evaluated in CPU registers. Red/rose animations indicate in-place exchanges, shifts, or partition relocations.
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Column: Visualizer Legend / Cue Cards */}
+                            <div className="lg:col-span-7 flex flex-col gap-3">
+                              <span className="text-xs uppercase font-mono tracking-widest text-indigo-300 font-bold">
+                                What to Watch in the Visualizer (Visual Legend)
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                {guide.visualizerGuide.map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="p-4 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col justify-between gap-3 shadow-xl hover:border-indigo-500/30 transition-all"
+                                  >
+                                    <div className="flex flex-col gap-2">
+                                      <span
+                                        className={`self-start text-[10px] font-mono font-bold px-2.5 py-1 rounded-md ${item.colorClass}`}
+                                      >
+                                        {item.badge}
+                                      </span>
+                                      <h4 className="text-sm sm:text-base font-bold text-white">
+                                        {item.title}
+                                      </h4>
+                                      <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
+                                        {item.meaning}
+                                      </p>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-gray-300">
+                                      <b className="text-indigo-300 block mb-1 font-mono uppercase text-[10px]">
+                                        Why this step happens:
+                                      </b>
+                                      {item.why}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STEP 3: Best & Worst Case Scenarios (Side-by-Side Left & Right) */}
+                        {guidedStep === 3 && (
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                            {/* Left Column: 4 Big-O Complexity Badges + Memory Model */}
+                            <div className="lg:col-span-5 flex flex-col gap-4">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
+                                    Best Case Time
+                                  </span>
+                                  <span className="text-lg sm:text-xl font-black text-emerald-400 font-mono">
+                                    {guide.timeBest}
+                                  </span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
+                                    Average Time
+                                  </span>
+                                  <span className="text-lg sm:text-xl font-black text-indigo-400 font-mono">
+                                    {guide.timeAvg}
+                                  </span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
+                                    Worst Case Time
+                                  </span>
+                                  <span className="text-lg sm:text-xl font-black text-rose-400 font-mono">
+                                    {guide.timeWorst}
+                                  </span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
+                                    Space Complexity
+                                  </span>
+                                  <span className="text-lg sm:text-xl font-black text-amber-400 font-mono">
+                                    {guide.space}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Memory & Stability Breakdown */}
+                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
+                                <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold flex items-center gap-2">
+                                  <Scale className="h-4 w-4 text-indigo-400" />
+                                  Memory Architecture & Stability
+                                </span>
+                                <div className="text-xs sm:text-sm text-gray-200 flex flex-col gap-2 font-medium leading-relaxed">
+                                  <p><b>Auxiliary Space:</b> {guide.whySpace}</p>
+                                  <p>
+                                    <b>Stability:</b>{" "}
+                                    {guide.stable
+                                      ? "Guaranteed stable — duplicate values preserve their original relative order."
+                                      : "Unstable — duplicate values may change relative order due to distant swaps."}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Column: Best vs Worst Case Explanations */}
+                            <div className="lg:col-span-7 flex flex-col gap-4">
+                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-emerald-500/30 flex flex-col gap-2.5 shadow-xl">
+                                <div className="flex items-center gap-2.5 border-b border-emerald-500/20 pb-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50" />
+                                  <span className="text-xs sm:text-sm font-mono font-black text-emerald-400 uppercase tracking-wide">
+                                    Best-Case Scenario: {guide.step3_bestTitle}
+                                  </span>
+                                </div>
+                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
+                                  {guide.step3_bestDetails}
+                                </p>
+                              </div>
+
+                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-rose-500/30 flex flex-col gap-2.5 shadow-xl">
+                                <div className="flex items-center gap-2.5 border-b border-rose-500/20 pb-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-md shadow-rose-400/50" />
+                                  <span className="text-xs sm:text-sm font-mono font-black text-rose-400 uppercase tracking-wide">
+                                    Worst-Case Scenario: {guide.step3_worstTitle}
+                                  </span>
+                                </div>
+                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
+                                  {guide.step3_worstDetails}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* STEPPER FOOTER NAVIGATION */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl shrink-0 shadow-2xl">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                          {guidedStep > 1 && (
+                            <button
+                              onClick={() => setGuidedStep((guidedStep - 1) as 1 | 2 | 3)}
+                              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-gray-100 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center gap-2 shadow"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              <span>Previous Step</span>
+                            </button>
+                          )}
+                          {guidedStep < 3 && (
+                            <button
+                              onClick={() => setGuidedStep((guidedStep + 1) as 1 | 2 | 3)}
+                              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/30"
+                            >
+                              <span>Next: Step {guidedStep + 1}</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
                           <button
-                            onClick={startSorting}
-                            className="px-2.5 py-1 rounded bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold cursor-pointer transition-all"
+                            onClick={async () => {
+                              setViewMode("visualizer");
+                              setIsConfigCollapsed(true);
+                              if (steps.length === 0) {
+                                await startSorting();
+                              }
+                              setIsPlaying(false);
+                              setCurrentStepIndex(0);
+                            }}
+                            className="flex-1 sm:flex-initial px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-gray-200 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center justify-center gap-2 shadow"
                           >
-                            Retry
+                            <RotateCcw className="h-4 w-4" />
+                            <span>Step-by-Step</span>
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              setViewMode("visualizer");
+                              setIsConfigCollapsed(true);
+                              if (steps.length === 0) {
+                                await startSorting();
+                              }
+                              setIsPlaying(true);
+                            }}
+                            className="flex-1 sm:flex-initial px-8 py-3 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-sm sm:text-base rounded-xl shadow-xl shadow-indigo-600/30 cursor-pointer flex items-center justify-center gap-2.5 transition-all transform hover:scale-[1.02]"
+                          >
+                            <Zap className="h-4 w-4 animate-pulse" />
+                            <span>Start Visualization</span>
                           </button>
                         </div>
-                      )}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div
+                  className={`flex-1 min-h-0 ${
+                    battleMode
+                      ? "grid grid-cols-1 xl:grid-cols-2 gap-3"
+                      : "flex flex-col w-full"
+                  } h-full overflow-hidden`}
+                >
+                  {/* Primary Visualizer Card */}
+                  <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-3 border border-white/5 flex flex-col justify-between overflow-hidden">
+                    {/* Top Live State Variables & Legend Strip */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-white/5 font-mono text-[11px] mb-2 shrink-0 select-none">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                          <span className="text-gray-400 text-[10px] uppercase font-bold">Event:</span>
+                          <span className="text-indigo-400 font-extrabold uppercase tracking-wide">
+                            {steps[currentStepIndex]?.event_type || "READY"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                          <span className="text-gray-400 text-[10px] uppercase font-bold">Compare:</span>
+                          <span className="text-amber-400 font-extrabold">
+                            {steps[currentStepIndex]?.compare && steps[currentStepIndex].compare.length > 0
+                              ? `[${steps[currentStepIndex].compare.join(", ")}]`
+                              : "None"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                          <span className="text-gray-400 text-[10px] uppercase font-bold">Swap / Shift:</span>
+                          <span className="text-rose-400 font-extrabold">
+                            {steps[currentStepIndex]?.swap && steps[currentStepIndex].swap.length > 0
+                              ? `[${steps[currentStepIndex].swap.join(", ")}]`
+                              : "None"}
+                          </span>
+                        </div>
+                        {steps[currentStepIndex]?.pivot !== undefined && (
+                          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                            <span className="text-gray-400 text-[10px] uppercase font-bold">Pivot:</span>
+                            <span className="text-cyan-400 font-extrabold">
+                              {steps[currentStepIndex].pivot}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
+                      {/* Inline Legend & Quick AI Explain */}
+                      <div className="flex items-center gap-3">
+                        {ALGO_LEGENDS[algorithm.toLowerCase()] && (
+                          <div className="hidden md:flex flex-wrap items-center gap-2 text-[10px]">
+                            {ALGO_LEGENDS[algorithm.toLowerCase()].map((item, idx) => (
+                              <span key={idx} className="flex items-center gap-1 text-gray-300">
+                                <span className={`w-2 h-2 rounded-full ${item.color.split(" ")[0]}`} />
+                                <span>{item.label}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={explainCurrentStep}
+                          disabled={steps.length === 0}
+                          className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1 transition-all"
+                          title="Ask AI Tutor to explain current step"
+                        >
+                          <BrainCircuit className="h-3 w-3" />
+                          <span>Explain Step</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {executionError && (
+                      <div className="mb-2 p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center justify-between text-xs text-rose-300 font-medium">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                          {executionError}
+                        </span>
+                        <button
+                          onClick={startSorting}
+                          className="px-2 py-0.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold cursor-pointer transition-all"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Canvas Stage */}
+                    <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden py-1">
                       <VisualizerFactory
                         array={array}
                         originalArray={originalArray}
@@ -1641,8 +3367,14 @@ function SortMentorContent() {
                         isPlaying={isPlaying}
                         speed={speed}
                         onPlayPause={() => setIsPlaying(!isPlaying)}
-                        onNext={() => currentStepIndex < steps.length - 1 && setCurrentStepIndex(currentStepIndex + 1)}
-                        onPrev={() => currentStepIndex > 0 && setCurrentStepIndex(currentStepIndex - 1)}
+                        onNext={() =>
+                          currentStepIndex < steps.length - 1 &&
+                          setCurrentStepIndex(currentStepIndex + 1)
+                        }
+                        onPrev={() =>
+                          currentStepIndex > 0 &&
+                          setCurrentStepIndex(currentStepIndex - 1)
+                        }
                         onRestart={resetPlayback}
                         onJump={setCurrentStepIndex}
                         onSpeedChange={setSpeed}
@@ -1651,410 +3383,108 @@ function SortMentorContent() {
                         algorithmName={algorithm}
                         battleId={1}
                       />
+                    </div>
 
-                      {/* Floating Explanation Hub toggle button */}
-                      {!isExplanationOpen && !battleMode && !isFullscreen && (
-                        <button
-                          onClick={() => setIsExplanationOpen(true)}
-                          className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/10 hover:bg-slate-800 text-[10px] font-mono font-bold text-indigo-400 hover:text-indigo-300 shadow-lg cursor-pointer flex items-center gap-1.5 transition-all z-10"
-                        >
-                          <Sliders className="h-3 w-3" />
-                          Open Explanation Hub
-                        </button>
-                      )}
-                    </>
+                    {/* Live State Action Summary Bar */}
+                    <div className="pt-2 text-center shrink-0 border-t border-white/5 mt-1">
+                      <span className="text-xs text-indigo-300 font-mono block truncate">
+                        {steps[currentStepIndex]?.message ||
+                          "Ready. Click Run to start sorting."}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Battle Arena Visualizer 2 if Battle Mode is Active */}
+                  {battleMode && (
+                    <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-3 border border-pink-500/30 flex flex-col justify-between overflow-hidden">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span className="text-xs font-bold text-pink-400 uppercase font-mono">
+                          {algorithm2} Sort (Opponent)
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-400">
+                          Step: {stats2.step} | Swaps: {stats2.swaps}
+                        </span>
+                      </div>
+
+                      {/* Opponent Live State Variables */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-pink-500/20 font-mono text-[11px] my-2 shrink-0 select-none">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                            <span className="text-gray-400 text-[10px] uppercase font-bold">Event:</span>
+                            <span className="text-pink-400 font-extrabold uppercase tracking-wide">
+                              {steps2[currentStepIndex2]?.event_type || "READY"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                            <span className="text-gray-400 text-[10px] uppercase font-bold">Compare:</span>
+                            <span className="text-amber-400 font-extrabold">
+                              {steps2[currentStepIndex2]?.compare && steps2[currentStepIndex2].compare.length > 0
+                                ? `[${steps2[currentStepIndex2].compare.join(", ")}]`
+                                : "None"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                            <span className="text-gray-400 text-[10px] uppercase font-bold">Swap / Shift:</span>
+                            <span className="text-rose-400 font-extrabold">
+                              {steps2[currentStepIndex2]?.swap && steps2[currentStepIndex2].swap.length > 0
+                                ? `[${steps2[currentStepIndex2].swap.join(", ")}]`
+                                : "None"}
+                            </span>
+                          </div>
+                          {steps2[currentStepIndex2]?.pivot !== undefined && (
+                            <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
+                              <span className="text-gray-400 text-[10px] uppercase font-bold">Pivot:</span>
+                              <span className="text-cyan-400 font-extrabold">
+                                {steps2[currentStepIndex2].pivot}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden py-1">
+                        <VisualizerFactory
+                          array={
+                            steps2[currentStepIndex2]?.array || originalArray
+                          }
+                          originalArray={originalArray}
+                          steps={steps2}
+                          currentStepIndex={currentStepIndex2}
+                          isPlaying={isPlaying}
+                          speed={speed}
+                          onPlayPause={() => setIsPlaying(!isPlaying)}
+                          onNext={() =>
+                            currentStepIndex2 < steps2.length - 1 &&
+                            setCurrentStepIndex2(currentStepIndex2 + 1)
+                          }
+                          onPrev={() =>
+                            currentStepIndex2 > 0 &&
+                            setCurrentStepIndex2(currentStepIndex2 - 1)
+                          }
+                          onRestart={resetPlayback}
+                          onJump={setCurrentStepIndex2}
+                          onSpeedChange={setSpeed}
+                          zoom={zoom}
+                          fullscreen={isFullscreen}
+                          algorithmName={algorithm2}
+                          battleId={2}
+                        />
+                      </div>
+
+                      <div className="pt-2 text-center shrink-0 border-t border-white/5 mt-1">
+                        <span className="text-xs text-pink-300 font-mono block truncate">
+                          {steps2[currentStepIndex2]?.message || "Ready."}
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {/* Steps status log */}
-                <div className="pt-3 text-center shrink-0 border-t border-white/5 mt-2">
-                  <span className="text-xs text-gray-400 font-medium font-mono block truncate">
-                    {steps[currentStepIndex]?.message || "Visualizer ready. Click run sorting to visualize."}
-                  </span>
-                </div>
-              </div>
-
-              {/* Visualizer 2 (Battle Arena) */}
-              {battleMode && (
-                <div 
-                  className="glass-card p-5 flex flex-col relative justify-between border-t-2 border-t-pink-500 xl:border-t-0 xl:border-l-2 xl:border-l-pink-500"
-                  style={{
-                    minHeight: isFullscreen ? "100%" : `${ALGO_LAYOUTS[algorithm2]?.preferredHeight || 600}px`
-                  }}
-                >
-                  
-                  {/* Header metrics 2 */}
-                  <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse"></span>
-                      <span className="text-sm font-bold text-white uppercase font-mono">{algorithm2} Sort</span>
-                    </div>
-                    {metrics2 && (
-                      <div className="flex gap-3 text-[10px] font-mono text-gray-400">
-                        <span>Swaps: <b className="text-pink-400">{stats2.swaps}</b></span>
-                        <span>Compares: <b className="text-amber-400">{stats2.compares}</b></span>
-                        <span>Time: <b className="text-white">{metrics2.time_ms.toFixed(1)}ms</b></span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Dynamic Metrics 2 */}
-                  <div className="grid grid-cols-5 gap-2 py-2 bg-slate-950/40 rounded-lg px-3 border border-white/5 my-2 text-[10px] font-mono shrink-0">
-                    <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Step</span><span className="text-white font-bold">{stats2.step}</span></div>
-                    <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Phase</span><span className="text-pink-400 font-bold truncate block">{stats2.phase}</span></div>
-                    <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Pivot</span><span className="text-cyan-400 font-bold">{stats2.pivot}</span></div>
-                    <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Compares</span><span className="text-amber-400 font-bold">{stats2.compares}</span></div>
-                    <div className="text-center"><span className="text-gray-500 block text-[8px] uppercase">Swaps</span><span className="text-pink-400 font-bold">{stats2.swaps}</span></div>
-                  </div>
-
-                  {/* Visualizer 2 Integration */}
-                  <div className="flex-grow min-h-0 flex flex-col justify-end relative overflow-hidden py-2">
-                    {/* Context-Aware Color Legend 2 */}
-                    {ALGO_LEGENDS[algorithm2.toLowerCase()] && (
-                      <div className="flex flex-wrap items-center gap-3 py-1.5 px-3 rounded-lg bg-slate-950/20 border border-white/5 text-[9px] font-mono text-gray-400 mb-2 shrink-0 select-none">
-                        <span className="text-gray-500 uppercase font-bold tracking-wider mr-1 font-sans">Legend:</span>
-                        {ALGO_LEGENDS[algorithm2.toLowerCase()].map((item, idx) => (
-                          <span key={idx} className="flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full ${item.color.split(" ")[0]}`}></span>
-                            <span>{item.label}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <VisualizerFactory
-                      array={steps2[currentStepIndex2]?.array || originalArray}
-                      originalArray={originalArray}
-                      steps={steps2}
-                      currentStepIndex={currentStepIndex2}
-                      isPlaying={isPlaying}
-                      speed={speed}
-                      onPlayPause={() => setIsPlaying(!isPlaying)}
-                      onNext={() => currentStepIndex2 < steps2.length - 1 && setCurrentStepIndex2(currentStepIndex2 + 1)}
-                      onPrev={() => currentStepIndex2 > 0 && setCurrentStepIndex2(currentStepIndex2 - 1)}
-                      onRestart={resetPlayback}
-                      onJump={setCurrentStepIndex2}
-                      onSpeedChange={setSpeed}
-                      zoom={zoom}
-                      fullscreen={isFullscreen}
-                      algorithmName={algorithm2}
-                      battleId={2}
-                    />
-                  </div>
-
-                  {/* Steps status log 2 */}
-                  <div className="pt-3 text-center shrink-0 border-t border-white/5 mt-2">
-                    <span className="text-xs text-gray-400 font-medium font-mono block truncate">
-                      {steps2[currentStepIndex2]?.message || "Ready to compare."}
-                    </span>
-                  </div>
-                </div>
               )}
-
             </div>
           </div>
-
-            {/* Combined Playback Control Bar & Timeline (Priority 2 & 3) */}
-            <div className="glass-panel p-4 rounded-xl flex flex-col gap-3 shrink-0 mt-4">
-              
-              {/* Playback Controls & Settings Row */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={startSorting}
-                    disabled={isLoadingVisuals}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-sm text-white disabled:opacity-40 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all shrink-0"
-                  >
-                    {isLoadingVisuals ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                    ) : (
-                      <Zap className="h-4 w-4" />
-                    )}
-                    Run Sorting
-                  </button>
-
-                  {/* Reset Playback */}
-                  <button
-                    onClick={() => jumpToStep(0)}
-                    disabled={steps.length === 0}
-                    className="p-2.5 rounded-lg bg-slate-900 border border-white/5 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
-                    title="Reset Playback"
-                  >
-                    <RotateCcw className="h-4.5 w-4.5" />
-                  </button>
-
-                  {/* Previous Step */}
-                  <button
-                    onClick={() => currentStepIndex > 0 && jumpToStep(currentStepIndex - 1)}
-                    disabled={currentStepIndex <= 0}
-                    className="p-2.5 rounded-lg bg-slate-900 border border-white/5 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
-                    title="Previous Step"
-                  >
-                    <ChevronLeft className="h-4.5 w-4.5" />
-                  </button>
-
-                  {/* Play / Pause Toggle */}
-                  <button
-                    onClick={() => steps.length > 0 && setIsPlaying(!isPlaying)}
-                    disabled={steps.length === 0}
-                    className="p-3.5 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 cursor-pointer transition-all shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                  >
-                    {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
-                  </button>
-
-                  {/* Next Step */}
-                  <button
-                    onClick={() => currentStepIndex < steps.length - 1 && jumpToStep(currentStepIndex + 1)}
-                    disabled={steps.length === 0 || currentStepIndex >= steps.length - 1}
-                    className="p-2.5 rounded-lg bg-slate-900 border border-white/5 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
-                    title="Next Step"
-                  >
-                    <ChevronRight className="h-4.5 w-4.5" />
-                  </button>
-                </div>
-
-                {/* Speed Controller */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-gray-500 font-bold">Speed</span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="1500"
-                    value={displaySpeed}
-                    onChange={(e) => setSpeed(1550 - Number(e.target.value))}
-                    disabled={steps.length === 0}
-                    className="w-24 accent-indigo-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] font-mono text-gray-400 min-w-[42px] text-right">{speed}ms</span>
-                </div>
-
-                {/* Zoom & Fullscreen Controls */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setZoom(1)}
-                    disabled={zoom === 1}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/5 text-[9px] font-mono text-gray-400 hover:text-white disabled:opacity-40 transition-colors cursor-pointer"
-                    title="Reset Zoom"
-                  >
-                    Reset Zoom
-                  </button>
-
-                  <button
-                    onClick={() => setIsFullscreen(!isFullscreen)}
-                    className="p-2 rounded-lg bg-slate-900 border border-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer"
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
-                  >
-                    {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Interactive Playback Timeline Track */}
-              <div className="border-t border-white/5 pt-3">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center text-[9px] font-mono text-gray-500 select-none">
-                    <span>Playback Timeline</span>
-                    <span>Step {currentStepIndex + 1} / {Math.max(1, steps.length)}</span>
-                  </div>
-                  <div 
-                    className="relative flex items-center w-full group py-2"
-                    onMouseMove={handleTimelineMouseMove}
-                    onMouseLeave={() => setHoveredStepIdx(null)}
-                  >
-                    <input
-                      type="range"
-                      min="0"
-                      max={Math.max(0, steps.length - 1)}
-                      value={currentStepIndex}
-                      onChange={(e) => jumpToStep(Number(e.target.value))}
-                      disabled={steps.length === 0}
-                      className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
-                    />
-
-                    {/* Hover Tooltip bubble */}
-                    {hoveredStepIdx !== null && steps[hoveredStepIdx] && (
-                      <div
-                        className="absolute bottom-full mb-3 bg-slate-950/95 border border-indigo-500/20 text-gray-200 text-[10px] font-sans px-2.5 py-1.5 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.4)] pointer-events-none select-none z-30 w-52 break-words -translate-x-1/2 backdrop-blur"
-                        style={{ left: `${tooltipX}px` }}
-                      >
-                        <div className="font-bold text-indigo-400 mb-0.5 font-mono">Step {hoveredStepIdx + 1} ({steps[hoveredStepIdx].event_type}):</div>
-                        <div className="leading-normal">{steps[hoveredStepIdx].message}</div>
-                      </div>
-                    )}
-
-                    {steps.length > 0 && steps.length <= 30 && (
-                      <div className="absolute inset-x-0 flex justify-between h-1.5 items-center pointer-events-none px-[3px]">
-                        {steps.map((step, idx) => {
-                          const isActive = idx === currentStepIndex;
-                          const isSwap = step.event_type === "swap" || step.event_type === "merge";
-                          const isCompare = step.event_type === "comparison";
-
-                          let tickBg = "bg-slate-700";
-                          if (isActive) tickBg = "bg-indigo-400 scale-125";
-                          else if (isSwap) tickBg = "bg-rose-500/80";
-                          else if (isCompare) tickBg = "bg-amber-400/80";
-
-                          return (
-                            <div
-                              key={idx}
-                              className={`w-1.5 h-1.5 rounded-full ${tickBg}`}
-                              title={`Step ${idx + 1}: ${step.message}`}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-          {/* Explanation & Pseudocode Panel (Priority 9 / Collapsible Bottom Drawer) */}
-          <AnimatePresence>
-            {isExplanationOpen && !battleMode && !isFullscreen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col gap-4 shrink-0 overflow-hidden relative"
-              >
-                {/* Close Button */}
-                <button
-                  onClick={() => setIsExplanationOpen(false)}
-                  className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-900 border border-transparent hover:border-white/5 text-gray-500 hover:text-white transition-all cursor-pointer z-10"
-                  title="Close Explanation Hub"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-
-                <div className="flex flex-col gap-1 border-b border-white/5 pb-2 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white font-mono uppercase font-semibold">Explanation Hub</span>
-                    <span className="text-[10px] font-semibold text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/10 font-mono">
-                      Step {currentStepIndex + 1} / {steps.length}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-400 font-mono uppercase tracking-tight mt-1 gap-2">
-                    <span>
-                      Complexity: <span className="text-indigo-300 font-bold">Time {ALGO_METADATA[algorithm]?.timeAvg || "O(n²)"}</span> | <span className="text-emerald-300 font-bold">Space {ALGO_METADATA[algorithm]?.space || "O(1)"}</span>
-                    </span>
-                    
-                    {/* Live SVG Complexity Sparkline */}
-                    {steps.length > 0 && (
-                      <div className="flex items-center gap-2 bg-slate-950/60 px-2 py-0.5 rounded border border-white/5" title="Live operation progress compared to theoretical curve">
-                        <span className="text-[8px] text-gray-500 font-bold font-sans">Growth:</span>
-                        <svg width="80" height="16" className="overflow-visible select-none">
-                          {/* Draw base curve */}
-                          <path
-                            d={
-                              ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                                ? "M 0,16 Q 40,16 80,2"
-                                : ["merge", "quick", "heap", "timsort"].includes(algorithm.toLowerCase())
-                                  ? "M 0,16 C 30,12 50,6 80,2"
-                                  : "M 0,16 L 80,2"
-                            }
-                            fill="none"
-                            stroke="rgba(99, 102, 241, 0.25)"
-                            strokeWidth="1.5"
-                          />
-                          {/* Draw progress curve path */}
-                          <path
-                            d={
-                              ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                                ? `M 0,16 Q ${40 * (currentStepIndex / (steps.length - 1 || 1))} ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))} ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * Math.pow(currentStepIndex / (steps.length - 1 || 1), 2))}`
-                                : `M 0,16 L ${80 * (currentStepIndex / (steps.length - 1 || 1))}, ${16 - (14 * (currentStepIndex / (steps.length - 1 || 1)))}`
-                            }
-                            fill="none"
-                            stroke="rgba(99, 102, 241, 0.85)"
-                            strokeWidth="2"
-                            className="transition-all duration-300"
-                          />
-                          {/* Tracer Dot */}
-                          <circle
-                            cx={80 * (currentStepIndex / (steps.length - 1 || 1))}
-                            cy={
-                              16 - (
-                                ["bubble", "selection", "insertion", "shell"].includes(algorithm.toLowerCase())
-                                  ? Math.pow(currentStepIndex / (steps.length - 1 || 1), 2) * 14
-                                  : (currentStepIndex / (steps.length - 1 || 1)) * 14
-                              )
-                            }
-                            r="2.5"
-                            className="fill-indigo-400 shadow shadow-indigo-500/50 transition-all duration-300"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 min-h-0 overflow-y-auto pt-1 pr-1 text-[11px] leading-relaxed">
-                  {/* Action Description */}
-                  <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5">
-                    <span className="font-bold text-[9px] uppercase tracking-wider text-indigo-400 font-mono block">Current Action</span>
-                    <p className="text-gray-300 font-medium">
-                      {steps[currentStepIndex]?.message || "No sorting operations running. Custom array loaded."}
-                    </p>
-                  </div>
-
-                  {/* State variables */}
-                  <div className="p-3.5 rounded-xl bg-slate-950/50 border border-white/5 flex flex-col gap-1.5 font-mono text-[10px]">
-                    <span className="font-bold text-[9px] uppercase tracking-wider text-rose-400 font-mono block">State Variables</span>
-                    {steps[currentStepIndex] ? (
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Event:</span><span className="text-white uppercase font-bold">{steps[currentStepIndex].event_type}</span></div>
-                        <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Comparisons:</span><span className="text-amber-400 font-bold">{steps[currentStepIndex].compare?.join(', ') || 'None'}</span></div>
-                        <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-gray-500">Swaps:</span><span className="text-rose-400 font-bold">{steps[currentStepIndex].swap?.join(', ') || 'None'}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Pivot:</span><span className="text-cyan-400 font-bold">{steps[currentStepIndex].pivot !== undefined ? steps[currentStepIndex].pivot : 'None'}</span></div>
-                      </div>
-                    ) : (
-                      <span className="text-gray-600">No active state variables</span>
-                    )}
-                  </div>
-
-                  {/* Pseudocode Panel */}
-                  <div className="flex flex-col gap-1.5 bg-slate-950/40 rounded-xl p-3.5 border border-white/5 min-h-[140px]">
-                    <span className="font-bold text-[9px] uppercase tracking-wider text-emerald-400 font-mono block shrink-0">Algorithm Pseudocode</span>
-                    <div className="flex flex-col gap-0.5 select-none overflow-y-auto flex-1 max-h-[140px]">
-                      {(ALGO_METADATA[algorithm]?.pseudocode || ALGO_METADATA.bubble.pseudocode).map((line, lineIdx) => {
-                        const activeLine = getActivePseudocodeLine(algorithm, steps[currentStepIndex]?.event_type || "");
-                        const isHighlighted = activeLine === lineIdx;
-                        return (
-                          <div
-                            key={lineIdx}
-                            className={`px-2 py-0.5 font-mono text-[9px] rounded transition-all whitespace-pre ${
-                              isHighlighted
-                                ? "bg-indigo-500/20 border-l-2 border-indigo-500 text-indigo-200 font-bold"
-                                : "text-gray-500 font-medium"
-                            }`}
-                          >
-                            {line}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Explain Current Step trigger */}
-                <div className="flex justify-end pt-2 border-t border-white/5 shrink-0">
-                  <button
-                    onClick={explainCurrentStep}
-                    disabled={steps.length === 0}
-                    className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-semibold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(99,102,241,0.2)]"
-                  >
-                    <BrainCircuit className="h-3.5 w-3.5" />
-                    Ask AI to Explain Step
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
         </div>
 
+        {/* AI Tutor Chat Drawer (Slide-out) */}
         <AnimatePresence>
           {isChatOpen && !isFullscreen && (
             <motion.div
@@ -2062,128 +3492,69 @@ function SortMentorContent() {
               animate={{ width: chatWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ type: "spring", stiffness: 350, damping: 30 }}
-              className="glass-panel border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col h-[480px] lg:h-auto shrink-0 relative overflow-hidden"
-              style={{ width: `${chatWidth}px` }}
+              className="bg-slate-900/60 backdrop-blur-md border-l border-white/5 flex flex-col h-full shrink-0 relative overflow-hidden"
+              style={{ width: `min(100%, ${chatWidth}px)` }}
             >
-              
-              {/* Drag resizing handle */}
               <div
                 ref={resizerRef}
                 onMouseDown={handleMouseDown}
                 className="hidden lg:block absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-indigo-500/20 active:bg-indigo-500/40 z-30 transition-colors"
               />
 
-              {/* Sidebar Header: Chat Session Picker */}
-              <div className="p-4 border-b border-white/5 flex flex-col gap-3">
+              {/* Chat Header */}
+              <div className="p-3 border-b border-white/5 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <GraduationCap className="h-5 w-5 text-indigo-400" />
-                    <span className="font-bold text-sm text-white">SortMentor Tutor</span>
+                    <GraduationCap className="h-4 w-4 text-indigo-400" />
+                    <span className="font-bold text-xs text-white">
+                      SortMentor Tutor
+                    </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={createEmptyChat}
-                      className="p-1 hover:bg-slate-900 border border-transparent hover:border-white/5 rounded text-gray-400 hover:text-white"
+                      className="p-1 hover:bg-slate-800 rounded text-gray-400 hover:text-white"
                       title="New Chat Session"
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => setIsChatOpen(false)}
-                      className="p-1 hover:bg-slate-900 border border-transparent hover:border-white/5 rounded text-gray-400 hover:text-white"
+                      className="p-1 hover:bg-slate-800 rounded text-gray-400 hover:text-white"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
 
-                {/* Conversation History Drawer / Pinned Convers list */}
-                <div className="flex flex-col gap-2 relative">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search sessions..."
-                      value={chatSearchQuery}
-                      onChange={(e) => setChatSearchQuery(e.target.value)}
-                      className="w-full glass-input pl-8 py-1.5 text-xs font-mono"
-                    />
-                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-500" />
-                  </div>
-
-                  {/* Chats list */}
-                  <div className="max-h-[110px] overflow-y-auto flex flex-col gap-1 border border-white/5 rounded-lg p-1.5 bg-slate-950/40">
-                    {filteredConversations.length === 0 ? (
-                      <span className="text-[10px] text-gray-500 text-center font-mono py-2">No matching sessions</span>
-                    ) : (
-                      filteredConversations.map((chat) => (
-                        <div
-                          key={chat.id}
-                          onClick={() => setActiveChatId(chat.id)}
-                          className={`flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer font-mono group transition-colors ${
-                            chat.id === activeChatId
-                              ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
-                              : "hover:bg-white/5 text-gray-400"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 truncate flex-1 pr-2">
-                            <button
-                              onClick={(e) => togglePinConversation(chat.id, e)}
-                              className={`p-0.5 rounded transition-all hover:bg-white/5 ${chat.isPinned ? "text-pink-400" : "text-gray-600 group-hover:text-gray-400"}`}
-                            >
-                              <Pin className="h-3 w-3 fill-current" />
-                            </button>
-
-                            {editingChatId === chat.id ? (
-                              <input
-                                type="text"
-                                value={editTitleText}
-                                onChange={(e) => setEditTitleText(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && saveRenameConversation()}
-                                onBlur={saveRenameConversation}
-                                className="bg-slate-900 border border-white/10 text-xs px-1 text-white max-w-[120px] rounded focus:outline-none"
-                                autoFocus
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            ) : (
-                              <span className="truncate">{chat.title}</span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => startRenameConversation(chat.id, chat.title, e)}
-                              className="p-0.5 rounded text-gray-500 hover:text-white"
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={(e) => deleteConversation(chat.id, e)}
-                              className="p-0.5 rounded text-gray-500 hover:text-rose-400"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search sessions..."
+                    value={chatSearchQuery}
+                    onChange={(e) => setChatSearchQuery(e.target.value)}
+                    className="w-full bg-slate-950 border border-white/10 rounded-lg pl-7 pr-2.5 py-1 text-[11px] font-mono text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  />
+                  <Search className="absolute left-2 top-2 h-3 w-3 text-gray-500" />
                 </div>
               </div>
 
-              {/* Chat Session Message Feed */}
-              <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-4">
+              {/* Messages Feed */}
+              <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-3">
                 {activeConversation?.messages.map((chat, idx) => (
                   <div
                     key={idx}
-                    className={`flex flex-col gap-1 max-w-[85%] ${
-                      chat.sender === "user" ? "self-end items-end" : "self-start items-start"
+                    className={`flex flex-col gap-0.5 max-w-[85%] ${
+                      chat.sender === "user"
+                        ? "self-end items-end"
+                        : "self-start items-start"
                     }`}
                   >
-                    <span className="text-[9px] uppercase font-mono tracking-wider text-gray-500">
+                    <span className="text-[8px] uppercase font-mono tracking-wider text-gray-500">
                       {chat.sender === "user" ? "You" : "SortMentor"}
                     </span>
                     <div
-                      className={`p-3 rounded-xl text-xs leading-relaxed ${
+                      className={`p-2.5 rounded-xl text-xs leading-relaxed ${
                         chat.sender === "user"
                           ? "bg-indigo-600 text-white rounded-tr-none"
                           : "bg-slate-900/60 border border-white/5 text-gray-300 rounded-tl-none"
@@ -2195,9 +3566,11 @@ function SortMentorContent() {
                 ))}
 
                 {isTutorThinking && (
-                  <div className="self-start flex flex-col gap-1 max-w-[85%]">
-                    <span className="text-[9px] uppercase font-mono tracking-wider text-gray-500">SortMentor</span>
-                    <div className="bg-slate-900/60 border border-white/5 p-3 rounded-xl rounded-tl-none flex items-center gap-2">
+                  <div className="self-start flex flex-col gap-0.5 max-w-[85%]">
+                    <span className="text-[8px] uppercase font-mono tracking-wider text-gray-500">
+                      SortMentor
+                    </span>
+                    <div className="bg-slate-900/60 border border-white/5 p-2.5 rounded-xl rounded-tl-none flex items-center gap-1.5">
                       <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full"></div>
                       <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full delay-100"></div>
                       <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full delay-200"></div>
@@ -2207,74 +3580,39 @@ function SortMentorContent() {
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Chat Controller Actions: Explain, Clear, Export */}
-              <div className="px-4 py-2 border-t border-white/5 bg-slate-950/20 flex justify-between items-center gap-2">
-                {steps.length > 0 && (
-                  <button
-                    onClick={explainCurrentStep}
-                    disabled={isTutorThinking}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-semibold cursor-pointer disabled:opacity-50 transition-all"
-                  >
-                    <Sparkle className="h-3 w-3" />
-                    Explain Step
-                  </button>
-                )}
-
-                <div className="flex gap-2 ml-auto">
-                  <button
-                    onClick={exportChat}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-white/5 text-gray-400 hover:text-white text-[10px] cursor-pointer transition-all"
-                    title="Export Chat Log"
-                  >
-                    <Download className="h-3 w-3" />
-                    Export
-                  </button>
-                  <button
-                    onClick={clearChat}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-white/5 text-rose-400 hover:text-rose-300 text-[10px] cursor-pointer transition-all"
-                    title="Clear Chat Session"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              {/* Tutor Message input */}
-              <div className="p-4 border-t border-white/5 bg-slate-950/40">
-                <div className="flex gap-2">
+              {/* Chat Input */}
+              <div className="p-3 border-t border-white/5 bg-slate-950/40">
+                <div className="flex gap-1.5">
                   <input
                     type="text"
                     value={tutorMessage}
                     onChange={(e) => setTutorMessage(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && askAITutor()}
-                    placeholder="Ask e.g. Why did this swap happen?"
-                    className="flex-1 glass-input text-xs"
+                    placeholder="Ask why this swap happened..."
+                    className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                   />
                   <button
                     onClick={askAITutor}
-                    className="p-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-all"
+                    className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-all"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
-
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Collapsed Chat Toggle Button */}
+        {/* Collapsed Chat Trigger Button */}
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className="absolute right-4 top-4 p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/30 z-10 transition-all cursor-pointer"
+            className="absolute right-4 bottom-4 p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/30 z-10 transition-all cursor-pointer"
             title="Open AI Tutor"
           >
-            <GraduationCap className="h-5 w-5" />
+            <GraduationCap className="h-4 w-4" />
           </button>
         )}
-
       </div>
     </div>
   );
@@ -2282,16 +3620,19 @@ function SortMentorContent() {
 
 export default function SortMentor() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin" />
-          <p className="text-xs text-indigo-300/60 font-semibold tracking-wide animate-pulse">Loading SortMentor Workspace...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#030712] flex items-center justify-center text-white">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+            <p className="text-xs text-indigo-300/60 font-semibold tracking-wide animate-pulse">
+              Loading SortMentor Workspace...
+            </p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SortMentorContent />
     </Suspense>
   );
 }
-

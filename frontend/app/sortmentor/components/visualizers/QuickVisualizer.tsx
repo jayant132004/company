@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { VisualizerProps, getNormalizedHeight, getBarColorClass } from "./BaseVisualizer";
+import { VisualizerProps, getNormalizedHeight, getBarColorClass, getNumberFontSizeClass } from "./BaseVisualizer";
 import { ChevronDown } from "lucide-react";
 
 export default function QuickVisualizer({
@@ -13,6 +13,7 @@ export default function QuickVisualizer({
 }: VisualizerProps) {
   const activeStep = steps[currentStepIndex];
   const accentColor = battleId === 2 ? "pink" : "indigo";
+  const numFont = getNumberFontSizeClass(array.length);
 
   // Find the partition range [low, high] for the current step by tracing back
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
@@ -47,55 +48,60 @@ export default function QuickVisualizer({
 
   return (
     <div 
-      className="w-full h-full flex flex-col justify-between min-h-0"
+      className="w-full h-full flex flex-col justify-between min-h-0 relative overflow-hidden"
       style={{ transform: `scale(${zoom})`, transformOrigin: "bottom center" }}
     >
       {/* Array Bars Grid */}
-      <div className="flex-1 flex items-end justify-between gap-[2px] border-b border-white/5 pb-2 relative min-h-0 select-none overflow-hidden pt-8">
+      <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 border-b border-white/5 pb-2 relative min-h-0 select-none px-2 pt-12">
         {array.map((val, idx) => {
           const heightVal = getNormalizedHeight(val, originalArray);
           const barClass = getBarColorClass(idx, activeStep, accentColor);
           const isPivot = pivotIdx === idx;
           const isPointerI = pointers.i === idx;
           const isPointerJ = pointers.j === idx;
-          const showNumber = array.length <= 16;
 
           // Dim elements outside the active partition range to emphasize focus
           const inPartition = partitionRange ? (idx >= partitionRange.low && idx <= partitionRange.high) : true;
-          const opacityClass = inPartition ? "opacity-100" : "opacity-25";
+          const opacityClass = inPartition ? "opacity-100" : "opacity-30";
 
           return (
             <motion.div
               key={idx}
               layout
               transition={{ type: "spring", stiffness: 350, damping: 25 }}
-              className={`flex-1 rounded-t-md flex items-end justify-center select-none relative ${barClass} ${opacityClass}`}
+              className={`flex-1 min-w-0 rounded-t-lg flex flex-col items-center justify-between py-2 select-none relative transition-colors ${barClass} ${opacityClass}`}
               style={{ height: heightVal }}
             >
               {isPivot && (
-                <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-cyan-400 flex flex-col items-center animate-pulse">
-                  <span className="text-[7px] font-mono font-bold uppercase">PIVOT</span>
-                  <ChevronDown className="h-3 w-3" />
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-cyan-300 flex flex-col items-center animate-pulse z-10">
+                  <span className="text-[8px] font-mono font-extrabold uppercase bg-cyan-950/90 border border-cyan-400/40 px-1.5 py-0.2 rounded shadow-md">
+                    PIVOT
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 -mt-0.5" />
                 </div>
               )}
 
-              {isPointerI && (
-                <div className="absolute -top-4 left-0 text-rose-400 text-[8px] font-mono font-bold">
+              {isPointerI && !isPivot && (
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-[8px] font-mono font-extrabold px-1.5 py-0.2 rounded shadow-md z-10">
                   i
                 </div>
               )}
 
-              {isPointerJ && (
-                <div className="absolute -top-4 right-0 text-amber-400 text-[8px] font-mono font-bold">
+              {isPointerJ && !isPivot && (
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-[8px] font-mono font-extrabold px-1.5 py-0.2 rounded shadow-md z-10">
                   j
                 </div>
               )}
 
-              {showNumber && (
-                <span className="font-mono text-[9px] font-bold text-white pb-1 rotate-90 sm:rotate-0 origin-center truncate">
-                  {val}
-                </span>
-              )}
+              {/* Value Number */}
+              <span className={`font-mono ${numFont} text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] select-none truncate px-0.5`}>
+                {val}
+              </span>
+
+              {/* Index label */}
+              <span className="font-mono text-[9px] text-white/60 font-medium select-none hidden sm:block">
+                {idx}
+              </span>
             </motion.div>
           );
         })}
@@ -103,9 +109,9 @@ export default function QuickVisualizer({
 
       {/* Partition Range Indicator Bar */}
       {partitionRange && (
-        <div className="flex justify-between items-center text-[8px] font-mono text-gray-500 py-1 bg-slate-950/20 px-2 rounded-b border-t border-white/5">
-          <span>Partition Bounds:</span>
-          <span>Indices [{partitionRange.low} ... {partitionRange.high}]</span>
+        <div className="flex justify-between items-center text-[9px] font-mono text-gray-400 py-1 bg-slate-950/40 px-3 rounded-b border-t border-white/5">
+          <span>Active Partition Bounds:</span>
+          <span className="text-indigo-300 font-bold">[{partitionRange.low} ... {partitionRange.high}]</span>
         </div>
       )}
     </div>

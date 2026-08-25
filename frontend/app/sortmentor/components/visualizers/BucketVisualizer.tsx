@@ -81,13 +81,13 @@ export default function BucketVisualizer({
 
   return (
     <div 
-      className="w-full h-full flex flex-col justify-between p-4 gap-6 min-h-0 overflow-y-auto"
-      style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
+      className="w-full h-full flex flex-col justify-between p-2 sm:p-4 gap-4 min-h-0 overflow-y-auto"
+      style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
     >
       {/* 1. Input list */}
-      <div className="flex flex-col gap-1 shrink-0">
-        <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider block">Input dataset:</span>
-        <div className="flex gap-1.5 justify-between select-none">
+      <div className="flex flex-col gap-1.5 shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">Input dataset:</span>
+        <div className="flex gap-1.5 justify-between select-none overflow-x-auto pb-1">
           {originalArray.map((val, idx) => {
             const isDistributed = steps.slice(0, currentStepIndex + 1).some(s => s.event_type === "distribute_bucket" && s.compare && s.compare[0] === idx);
             const isActive = activeStep?.event_type === "distribute_bucket" && activeStep.compare && activeStep.compare[0] === idx;
@@ -95,15 +95,16 @@ export default function BucketVisualizer({
             return (
               <div
                 key={idx}
-                className={`flex-grow py-2 rounded-lg border text-center font-mono text-[10px] font-bold transition-all ${
+                className={`flex-grow min-w-[32px] py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${
                   isActive
-                    ? "bg-amber-400/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)] scale-105"
+                    ? "bg-amber-400/30 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(251,191,36,0.3)] scale-105"
                     : isDistributed
-                      ? "bg-slate-950/20 border-dashed border-white/5 text-gray-800 opacity-20"
-                      : "bg-slate-900 border-white/5 text-gray-300 hover:border-white/10"
+                      ? "bg-slate-950/20 border-dashed border-white/5 text-gray-700 opacity-30"
+                      : "bg-slate-900 border-white/10 text-gray-200"
                 }`}
               >
                 {val}
+                <span className="block text-[7px] text-gray-500 font-semibold mt-0.5">[{idx}]</span>
               </div>
             );
           })}
@@ -121,18 +122,18 @@ export default function BucketVisualizer({
                 key={bucketIdx}
                 layout
                 animate={{
-                  borderColor: isSorting ? "rgba(99, 102, 241, 0.6)" : "rgba(255,255,255,0.05)",
-                  boxShadow: isSorting ? "0 8px 24px rgba(99, 102, 241, 0.15)" : "none"
+                  borderColor: isSorting ? "rgba(99, 102, 241, 0.8)" : "rgba(255,255,255,0.1)",
+                  boxShadow: isSorting ? "0 8px 24px rgba(99, 102, 241, 0.25)" : "none"
                 }}
-                className={`w-28 rounded-b-3xl border-x-2 border-b-2 p-3 flex flex-col justify-end items-center gap-2 min-h-[180px] bg-slate-950/60 relative group`}
+                className={`w-28 rounded-b-3xl border-x-2 border-b-2 p-3 flex flex-col justify-end items-center gap-2 min-h-[160px] bg-slate-950/60 relative group`}
               >
                 {/* Bucket handle curve */}
                 <div className={`absolute -top-4 w-12 h-6 border-2 rounded-t-full pointer-events-none transition-colors ${
-                  isSorting ? "border-indigo-500/50" : "border-white/10 group-hover:border-white/20"
+                  isSorting ? "border-indigo-500/80" : "border-white/10 group-hover:border-white/20"
                 }`}></div>
 
                 {/* Bucket Title Tag */}
-                <span className="absolute top-2 text-[8px] font-mono text-gray-500 font-bold uppercase tracking-wider block">
+                <span className="absolute top-2 text-[9px] font-mono text-indigo-300 font-bold uppercase tracking-wider block">
                   Bucket {bucketIdx}
                 </span>
                 
@@ -146,7 +147,7 @@ export default function BucketVisualizer({
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ scale: 0.8, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="w-full py-1 text-center font-mono text-[10px] font-bold rounded-lg border border-white/5 bg-slate-900 text-gray-200 shadow-sm"
+                        className="w-full py-1.5 text-center font-mono text-xs font-extrabold rounded-lg border border-white/10 bg-slate-900 text-white shadow-sm"
                       >
                         {val}
                       </motion.div>
@@ -161,8 +162,8 @@ export default function BucketVisualizer({
 
       {/* 3. Collected output progress flow */}
       <div className="shrink-0 flex flex-col gap-1.5 p-3.5 bg-slate-950/40 rounded-xl border border-white/5">
-        <span className="text-[9px] font-mono text-gray-500 uppercase tracking-wider block">Collected / Sorted List:</span>
-        <div className="flex gap-1.5 justify-between select-none">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">Collected / Sorted List:</span>
+        <div className="flex gap-1.5 justify-between select-none overflow-x-auto pb-1">
           {array.map((val, idx) => {
             const isCollected = activeCollectIdx !== null && idx <= activeCollectIdx;
             const isCollectingNow = activeCollectIdx === idx;
@@ -170,15 +171,16 @@ export default function BucketVisualizer({
             return (
               <div
                 key={idx}
-                className={`flex-grow py-2 rounded-lg border text-center font-mono text-[10px] font-bold transition-all ${
+                className={`flex-grow min-w-[32px] py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${
                   isCollectingNow
-                    ? "bg-rose-500 border-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse"
+                    ? "bg-rose-500 border-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.5)] animate-pulse"
                     : isCollected
-                      ? "bg-slate-900 border-white/10 text-gray-200"
-                      : "bg-slate-950/20 border-dashed border-white/5 text-gray-800"
+                      ? "bg-slate-900 border-white/10 text-emerald-300"
+                      : "bg-slate-950/20 border-dashed border-white/5 text-gray-700"
                 }`}
               >
                 {isCollected || (activeCollectIdx !== null && idx < activeCollectIdx) ? val : "-"}
+                <span className="block text-[7px] text-gray-500 font-semibold mt-0.5">[{idx}]</span>
               </div>
             );
           })}

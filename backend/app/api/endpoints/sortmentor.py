@@ -79,6 +79,17 @@ def execute_sorting(payload: ExecuteRequest):
     sorted_array, steps, swaps, comparisons = func(payload.data)
     elapsed_ms = (time.perf_counter() - start_time) * 1000.0
     
+    if len(steps) == 0:
+        steps = [{
+            "step": 0,
+            "event_type": "lock_element",
+            "array": list(sorted_array),
+            "compare": None,
+            "swap": None,
+            "locked_indices": list(range(len(sorted_array))),
+            "message": f"{payload.algorithm} completed: array is fully sorted."
+        }]
+    
     return {
         "algorithm": payload.algorithm,
         "sorted_array": sorted_array,

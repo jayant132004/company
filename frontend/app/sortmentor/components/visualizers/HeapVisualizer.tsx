@@ -102,24 +102,24 @@ export default function HeapVisualizer({
             return (
               <g key={node.index}>
                 <foreignObject
-                  x={`calc(${node.x}% - 14px)`}
-                  y={node.y - 14}
-                  width="28"
-                  height="28"
+                  x={`calc(${node.x}% - 16px)`}
+                  y={node.y - 16}
+                  width="32"
+                  height="32"
                 >
                   <div
-                    className={`w-7 h-7 rounded-full border flex items-center justify-center text-[10px] font-mono font-bold transition-all ${circleFill}`}
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center text-xs font-mono font-extrabold shadow-md transition-all ${circleFill}`}
                   >
                     {node.value}
                   </div>
                 </foreignObject>
                 <text
                   x={`${node.x}%`}
-                  y={node.y + 24}
+                  y={node.y + 26}
                   textAnchor="middle"
-                  className="fill-gray-600 text-[7px] font-mono"
+                  className="fill-gray-400 text-[8px] font-mono font-semibold"
                 >
-                  idx:{node.index}
+                  [{node.index}]
                 </text>
               </g>
             );
@@ -128,23 +128,23 @@ export default function HeapVisualizer({
       </div>
 
       {/* 2. Synchronized Array Representation */}
-      <div className="shrink-0 flex flex-col gap-1.5 p-3 bg-slate-950/40 rounded-xl border border-white/5 mx-2">
-        <span className="text-[8px] font-mono text-gray-500 uppercase tracking-wider block">Underlying Array:</span>
-        <div className="flex gap-1 justify-between select-none">
+      <div className="shrink-0 flex flex-col gap-1.5 p-3.5 bg-slate-950/60 rounded-xl border border-white/5 mx-2 shadow-inner">
+        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-semibold">Underlying Array:</span>
+        <div className="flex gap-1.5 justify-between select-none">
           {array.map((val, idx) => {
             const isCompared = activeStep?.compare?.includes(idx);
             const isSwapped = activeStep?.swap?.includes(idx);
             const inSortedPart = idx >= heapSize;
 
-            let cellClass = "bg-slate-900 border-white/5 text-gray-400";
-            if (isSwapped) cellClass = "bg-rose-500/20 border-rose-500 text-rose-300 shadow-sm shadow-rose-500/10";
-            else if (isCompared) cellClass = "bg-amber-400/20 border-amber-400 text-amber-300 shadow-sm shadow-amber-400/10";
+            let cellClass = "bg-slate-900 border-white/10 text-gray-200";
+            if (isSwapped) cellClass = "bg-rose-500/30 border-rose-500 text-rose-200 shadow-md shadow-rose-500/20";
+            else if (isCompared) cellClass = "bg-amber-400/30 border-amber-400 text-amber-200 shadow-md shadow-amber-400/20";
             else if (inSortedPart) cellClass = "bg-emerald-500/20 border-emerald-500/40 text-emerald-300";
 
             return (
               <div
                 key={idx}
-                className={`flex-1 py-1.5 rounded border text-center font-mono text-[9px] font-bold transition-all ${cellClass}`}
+                className={`flex-1 py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${cellClass}`}
               >
                 {val}
               </div>

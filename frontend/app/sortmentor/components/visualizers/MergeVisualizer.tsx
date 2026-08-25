@@ -121,38 +121,38 @@ export default function MergeVisualizer({
         {/* Node Array Block */}
         <motion.div
           layout
-          className={`p-1.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${borderClass}`}
+          className={`p-2 rounded-xl border flex flex-col items-center gap-1.5 transition-all shadow-md ${borderClass}`}
         >
-          <div className="flex gap-0.5">
+          <div className="flex gap-1">
             {nodeArray.map((val, idx) => {
               const globalIdx = node.start + idx;
               const isCompared = activeStep?.compare?.includes(globalIdx);
               const isSwapped = activeStep?.swap?.includes(globalIdx);
               
-              let cellClass = "bg-slate-950/80 text-gray-400";
-              if (isSwapped) cellClass = "bg-rose-500/20 text-rose-300 border border-rose-500/40";
-              else if (isCompared) cellClass = "bg-amber-400/20 text-amber-300 border border-amber-400/40";
+              let cellClass = "bg-slate-950 text-gray-200 border-white/10";
+              if (isSwapped) cellClass = "bg-rose-500/30 text-rose-200 border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]";
+              else if (isCompared) cellClass = "bg-amber-400/30 text-amber-200 border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]";
 
               return (
                 <div
                   key={idx}
-                  className={`w-6 h-6 flex items-center justify-center font-mono text-[9px] font-bold rounded border border-white/5 ${cellClass}`}
+                  className={`min-w-[28px] h-7 px-1 flex items-center justify-center font-mono text-xs font-extrabold rounded-md border ${cellClass}`}
                 >
                   {val}
                 </div>
               );
             })}
           </div>
-          <span className="text-[7px] font-mono text-gray-600">
-            range: {node.start}-{node.end}
+          <span className="text-[8px] font-mono text-gray-400 font-semibold">
+            range: [{node.start}..{node.end - 1}]
           </span>
         </motion.div>
 
         {/* Children split */}
         {node.children.length > 0 && (
-          <div className="flex gap-6 mt-4 relative">
+          <div className="flex gap-4 sm:gap-6 mt-4 relative">
             {/* Split lines */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] h-[1px] bg-white/5 -translate-y-2"></div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[calc(100%-20px)] h-[1px] bg-white/10 -translate-y-2"></div>
             {node.children.map(child => renderNode(child))}
           </div>
         )}
