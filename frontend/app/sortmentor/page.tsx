@@ -2453,7 +2453,11 @@ function SortMentorContent() {
 
       {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 flex flex-col min-w-0 p-3 lg:p-4 gap-3 overflow-hidden h-full">
+        <div
+          className={`flex-1 flex flex-col min-w-0 p-3 lg:p-4 gap-3 h-full ${
+            viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
+          }`}
+        >
           {/* Top Quick Settings Bar (Collapsible) */}
           <AnimatePresence initial={false}>
             {isConfigCollapsed && !isFullscreen && (
@@ -2650,629 +2654,635 @@ function SortMentorContent() {
           </AnimatePresence>
 
           {/* Unified Visualizer & Side-by-Side Explanation Area */}
-          <div
-            ref={visualizerCardRef}
-            className={`flex-1 flex flex-col min-h-0 bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden ${
-              isFullscreen
-                ? "fixed inset-0 z-50 bg-slate-950 p-4"
-                : "relative"
-            }`}
-          >
-            {/* Top Toolbar Header (Contains Playback Controls, Timeline, Zoom & Tools - only visible in visualizer/battle mode) */}
-            {(viewMode === "visualizer" || battleMode) && (
-              <div className="px-4 py-2.5 border-b border-white/5 bg-slate-950/50 flex flex-col gap-2 shrink-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  {/* Left: Algorithm Name & Execution Metrics */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                      <span className="text-sm font-bold text-white uppercase font-mono">
-                        {algorithm} Sort
-                      </span>
+            <div
+              ref={visualizerCardRef}
+              className={`flex-1 flex flex-col min-h-0 bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl ${
+                viewMode === "intro" ? "overflow-y-auto min-h-fit" : "overflow-hidden"
+              } ${
+                isFullscreen
+                  ? "fixed inset-0 z-50 bg-slate-950 p-4"
+                  : "relative"
+              }`}
+            >
+              {/* Top Toolbar Header (Contains Playback Controls, Timeline, Zoom & Tools - only visible in visualizer/battle mode) */}
+              {(viewMode === "visualizer" || battleMode) && (
+                <div className="px-4 py-2.5 border-b border-white/5 bg-slate-950/50 flex flex-col gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    {/* Left: Algorithm Name & Execution Metrics */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                        <span className="text-sm font-bold text-white uppercase font-mono">
+                          {algorithm} Sort
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                          Step: <b className="text-white">{stats.step}</b>
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                          Compares: <b className="text-amber-400">{stats.compares}</b>
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                          Swaps: <b className="text-rose-400">{stats.swaps}</b>
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
-                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
-                        Step: <b className="text-white">{stats.step}</b>
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
-                        Compares: <b className="text-amber-400">{stats.compares}</b>
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
-                        Swaps: <b className="text-rose-400">{stats.swaps}</b>
-                      </span>
-                    </div>
-                  </div>
+                    {/* Center: Playback Controls */}
+                    <div className="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded-xl border border-white/5">
+                      <button
+                        onClick={startSorting}
+                        disabled={isLoadingVisuals}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white disabled:opacity-40 shadow-md shadow-indigo-600/20 cursor-pointer transition-all shrink-0"
+                      >
+                        {isLoadingVisuals ? (
+                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                        ) : (
+                          <Zap className="h-3 w-3" />
+                        )}
+                        Run
+                      </button>
 
-                  {/* Center: Playback Controls */}
-                  <div className="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded-xl border border-white/5">
-                    <button
-                      onClick={startSorting}
-                      disabled={isLoadingVisuals}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white disabled:opacity-40 shadow-md shadow-indigo-600/20 cursor-pointer transition-all shrink-0"
-                    >
-                      {isLoadingVisuals ? (
-                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                      ) : (
-                        <Zap className="h-3 w-3" />
-                      )}
-                      Run
-                    </button>
+                      <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
-                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-                    <button
-                      onClick={() => jumpToStep(0)}
-                      disabled={steps.length === 0}
-                      className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
-                      title="Reset to Start"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        currentStepIndex > 0 && jumpToStep(currentStepIndex - 1)
-                      }
-                      disabled={currentStepIndex <= 0}
-                      className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
-                      title="Previous Step"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </button>
-
-                    <button
-                      onClick={() => steps.length > 0 && setIsPlaying(!isPlaying)}
-                      disabled={steps.length === 0}
-                      className="p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition-all"
-                      title={isPlaying ? "Pause" : "Play"}
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-3.5 w-3.5" />
-                      ) : (
-                        <Play className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        currentStepIndex < steps.length - 1 &&
-                        jumpToStep(currentStepIndex + 1)
-                      }
-                      disabled={
-                        steps.length === 0 ||
-                        currentStepIndex >= steps.length - 1
-                      }
-                      className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
-                      title="Next Step"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-
-                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-                    {/* Speed slider in header */}
-                    <div className="flex items-center gap-1.5 text-[9px] font-mono text-gray-400">
-                      <span>{speed}ms</span>
-                      <input
-                        type="range"
-                        min="50"
-                        max="1500"
-                        value={displaySpeed}
-                        onChange={(e) => setSpeed(1550 - Number(e.target.value))}
+                      <button
+                        onClick={() => jumpToStep(0)}
                         disabled={steps.length === 0}
-                        className="w-16 accent-indigo-500 cursor-pointer"
-                        title="Adjust playback delay"
-                      />
+                        className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
+                        title="Reset to Start"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          currentStepIndex > 0 && jumpToStep(currentStepIndex - 1)
+                        }
+                        disabled={currentStepIndex <= 0}
+                        className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
+                        title="Previous Step"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => steps.length > 0 && setIsPlaying(!isPlaying)}
+                        disabled={steps.length === 0}
+                        className="p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition-all"
+                        title={isPlaying ? "Pause" : "Play"}
+                      >
+                        {isPlaying ? (
+                          <Pause className="h-3.5 w-3.5" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          currentStepIndex < steps.length - 1 &&
+                          jumpToStep(currentStepIndex + 1)
+                        }
+                        disabled={
+                          steps.length === 0 ||
+                          currentStepIndex >= steps.length - 1
+                        }
+                        className="p-1.5 rounded-md hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer disabled:opacity-40"
+                        title="Next Step"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+
+                      <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+                      {/* Speed slider in header */}
+                      <div className="flex items-center gap-1.5 text-[9px] font-mono text-gray-400">
+                        <span>{speed}ms</span>
+                        <input
+                          type="range"
+                          min="50"
+                          max="1500"
+                          value={displaySpeed}
+                          onChange={(e) => setSpeed(1550 - Number(e.target.value))}
+                          disabled={steps.length === 0}
+                          className="w-16 accent-indigo-500 cursor-pointer"
+                          title="Adjust playback delay"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right: Zoom, Fullscreen & Export Controls */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() =>
+                          setViewMode(viewMode === "intro" ? "visualizer" : "intro")
+                        }
+                        className={`p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white transition-all cursor-pointer ${
+                          viewMode === "intro"
+                            ? "text-indigo-400 bg-indigo-500/10"
+                            : ""
+                        }`}
+                        title="Toggle Explanation & Guide"
+                      >
+                        <BookOpen className="h-3.5 w-3.5" />
+                      </button>
+
+                      <div className="flex items-center bg-slate-900/60 rounded-lg px-1 py-0.5 border border-white/5">
+                        <button
+                          onClick={() => setZoom((prev) => Math.max(0.6, prev - 0.1))}
+                          className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                          title="Zoom Out"
+                        >
+                          <ZoomOut className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="text-[9px] font-mono text-gray-500 px-1 select-none">
+                          {Math.round(zoom * 100)}%
+                        </span>
+                        <button
+                          onClick={() => setZoom((prev) => Math.min(1.4, prev + 0.1))}
+                          className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                          title="Zoom In"
+                        >
+                          <ZoomIn className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => setIsFullscreen(!isFullscreen)}
+                        className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                      >
+                        {isFullscreen ? (
+                          <Minimize2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={exportReplay}
+                        className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                        title="Export Replay JSON"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Right: Zoom, Fullscreen & Export Controls */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() =>
-                        setViewMode(viewMode === "intro" ? "visualizer" : "intro")
-                      }
-                      className={`p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white transition-all cursor-pointer ${
-                        viewMode === "intro"
-                          ? "text-indigo-400 bg-indigo-500/10"
-                          : ""
-                      }`}
-                      title="Toggle Explanation & Guide"
-                    >
-                      <BookOpen className="h-3.5 w-3.5" />
-                    </button>
+                  {/* Integrated Scrubber Bar directly under header buttons */}
+                  <div
+                    className="relative flex items-center w-full group pt-1"
+                    onMouseMove={handleTimelineMouseMove}
+                    onMouseLeave={() => setHoveredStepIdx(null)}
+                  >
+                    <input
+                      type="range"
+                      min="0"
+                      max={Math.max(0, steps.length - 1)}
+                      value={currentStepIndex}
+                      onChange={(e) => jumpToStep(Number(e.target.value))}
+                      disabled={steps.length === 0}
+                      className="w-full h-1 bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
+                    />
 
-                    <div className="flex items-center bg-slate-900/60 rounded-lg px-1 py-0.5 border border-white/5">
-                      <button
-                        onClick={() => setZoom((prev) => Math.max(0.6, prev - 0.1))}
-                        className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
-                        title="Zoom Out"
+                    {hoveredStepIdx !== null && steps[hoveredStepIdx] && (
+                      <div
+                        className="absolute top-full mt-2 bg-slate-950/95 border border-indigo-500/20 text-gray-200 text-[10px] font-sans px-2.5 py-1.5 rounded-lg shadow-2xl pointer-events-none select-none z-30 w-52 break-words -translate-x-1/2 backdrop-blur-md"
+                        style={{ left: `${tooltipX}px` }}
                       >
-                        <ZoomOut className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="text-[9px] font-mono text-gray-500 px-1 select-none">
-                        {Math.round(zoom * 100)}%
-                      </span>
-                      <button
-                        onClick={() => setZoom((prev) => Math.min(1.4, prev + 0.1))}
-                        className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
-                        title="Zoom In"
-                      >
-                        <ZoomIn className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => setIsFullscreen(!isFullscreen)}
-                      className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
-                      title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                    >
-                      {isFullscreen ? (
-                        <Minimize2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <Maximize2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={exportReplay}
-                      className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
-                      title="Export Replay JSON"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Integrated Scrubber Bar directly under header buttons */}
-                <div
-                  className="relative flex items-center w-full group pt-1"
-                  onMouseMove={handleTimelineMouseMove}
-                  onMouseLeave={() => setHoveredStepIdx(null)}
-                >
-                  <input
-                    type="range"
-                    min="0"
-                    max={Math.max(0, steps.length - 1)}
-                    value={currentStepIndex}
-                    onChange={(e) => jumpToStep(Number(e.target.value))}
-                    disabled={steps.length === 0}
-                    className="w-full h-1 bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
-                  />
-
-                  {hoveredStepIdx !== null && steps[hoveredStepIdx] && (
-                    <div
-                      className="absolute top-full mt-2 bg-slate-950/95 border border-indigo-500/20 text-gray-200 text-[10px] font-sans px-2.5 py-1.5 rounded-lg shadow-2xl pointer-events-none select-none z-30 w-52 break-words -translate-x-1/2 backdrop-blur-md"
-                      style={{ left: `${tooltipX}px` }}
-                    >
-                      <div className="font-bold text-indigo-400 mb-0.5 font-mono">
-                        Step {hoveredStepIdx + 1} ({steps[hoveredStepIdx].event_type}):
-                      </div>
-                      <div className="leading-normal">
-                        {steps[hoveredStepIdx].message}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Main Stage: Visualizer (Left) + Integrated Explanation (Right) */}
-            <div className="flex-1 min-h-0 p-2 sm:p-4 flex flex-col overflow-hidden">
-              {viewMode === "intro" && !battleMode ? (
-                (() => {
-                  const guide = ALGO_GUIDES[algorithm.toLowerCase()] || ALGO_GUIDES.bubble;
-                  return (
-                    <div className="flex-1 min-h-0 flex flex-col justify-between overflow-y-auto w-full max-w-7xl mx-auto gap-4 p-1 sm:p-3">
-                      {/* TOP HEADER: Algorithm Profile & 3-Step Stepper Bar */}
-                      <div className="flex flex-col gap-3.5 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shrink-0 shadow-2xl">
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3.5">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className="w-3.5 h-3.5 rounded-full bg-indigo-500 animate-pulse shadow-lg shadow-indigo-500/50" />
-                            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight font-sans">
-                              {guide.name}
-                            </h2>
-                            <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm">
-                              {guide.category}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2.5 text-xs font-mono">
-                            <span
-                              className={`px-3 py-1 rounded-full border font-bold ${
-                                guide.stable
-                                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-                                  : "bg-amber-500/15 border-amber-500/30 text-amber-300"
-                              }`}
-                            >
-                              {guide.stable ? "✓ Stable Sort" : "⚠ Unstable Sort"}
-                            </span>
-                            <span
-                              className={`px-3 py-1 rounded-full border font-bold ${
-                                guide.inPlace
-                                  ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-300"
-                                  : "bg-purple-500/15 border-purple-500/30 text-purple-300"
-                              }`}
-                            >
-                              {guide.inPlace ? "In-Place O(1) Aux" : "Aux Memory Required"}
-                            </span>
-                          </div>
+                        <div className="font-bold text-indigo-400 mb-0.5 font-mono">
+                          Step {hoveredStepIdx + 1} ({steps[hoveredStepIdx].event_type}):
                         </div>
+                        <div className="leading-normal">
+                          {steps[hoveredStepIdx].message}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-                        {/* Stepper Progress Tabs */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                          {[
-                            { num: 1, title: "Step 1: The Goal & Analogy", icon: Lightbulb },
-                            { num: 2, title: "Step 2: How It Decides (Swaps vs Shifts)", icon: Compass },
-                            { num: 3, title: "Step 3: Best & Worst Scenarios", icon: Scale },
-                          ].map((st) => (
-                            <button
-                              key={st.num}
-                              onClick={() => setGuidedStep(st.num as 1 | 2 | 3)}
-                              className={`flex items-center justify-start gap-3 p-3 rounded-xl border text-sm font-bold transition-all cursor-pointer select-none ${
-                                guidedStep === st.num
-                                  ? "bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30 ring-2 ring-indigo-400/50"
-                                  : guidedStep > st.num
-                                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-                                  : "bg-slate-950/70 border-white/5 text-gray-400 hover:text-gray-200 hover:bg-slate-900"
-                              }`}
-                            >
+              {/* Main Stage: Visualizer (Left) + Integrated Explanation (Right) */}
+              <div
+                className={`flex-1 min-h-0 p-2 sm:p-4 flex flex-col ${
+                  viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
+                }`}
+              >
+                {viewMode === "intro" && !battleMode ? (
+                  (() => {
+                    const guide = ALGO_GUIDES[algorithm.toLowerCase()] || ALGO_GUIDES.bubble;
+                    return (
+                      <div className="flex-1 min-h-fit flex flex-col justify-start w-full max-w-7xl mx-auto gap-4 p-1 sm:p-2">
+                        {/* TOP HEADER: Algorithm Profile & 3-Step Stepper Bar */}
+                        <div className="flex flex-col gap-3.5 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shrink-0 shadow-2xl">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3.5">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <span className="w-3.5 h-3.5 rounded-full bg-indigo-500 animate-pulse shadow-lg shadow-indigo-500/50" />
+                              <h2 className="text-2xl sm:text-3xl font-black text-slate-100 uppercase tracking-tight font-sans">
+                                {guide.name}
+                              </h2>
+                              <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm">
+                                {guide.category}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2.5 text-xs font-mono">
                               <span
-                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 shadow ${
-                                  guidedStep === st.num
-                                    ? "bg-white text-indigo-700 font-black"
-                                    : guidedStep > st.num
-                                    ? "bg-emerald-500 text-slate-950 font-black"
-                                    : "bg-slate-800 text-gray-400"
+                                className={`px-3 py-1 rounded-full border font-bold ${
+                                  guide.stable
+                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                                    : "bg-amber-500/15 border-amber-500/30 text-amber-300"
                                 }`}
                               >
-                                {guidedStep > st.num ? "✓" : st.num}
+                                {guide.stable ? "✓ Stable Sort" : "⚠ Unstable Sort"}
                               </span>
-                              <span className="truncate">{st.title}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* STEPPER BODY: Spacious Left & Right 2-Column Grid */}
-                      <div className="flex-1 min-h-0 flex flex-col justify-between bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 gap-4 overflow-y-auto shadow-2xl">
-                        {/* STEP 1: The Goal & Analogy (Side-by-Side Left & Right) */}
-                        {guidedStep === 1 && (
-                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                            {/* Left Column: Goal Statement & Real-World Mental Model */}
-                            <div className="lg:col-span-5 flex flex-col gap-4">
-                              {/* Mission Card */}
-                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
-                                <div className="flex items-center gap-2 text-indigo-400">
-                                  <Sparkle className="h-4 w-4" />
-                                  <span className="text-xs font-mono uppercase font-bold tracking-wider">
-                                    The Core Mission & Objective
-                                  </span>
-                                </div>
-                                <h3 className="text-lg sm:text-xl font-black text-white leading-snug">
-                                  {guide.step1_goal}
-                                </h3>
-                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
-                                  {guide.description}
-                                </p>
-                              </div>
-
-                              {/* Real-World Analogy Card */}
-                              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-indigo-500/10 to-slate-950/80 border border-amber-500/30 flex items-start gap-3.5 shadow-xl">
-                                <Lightbulb className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
-                                <div className="flex flex-col gap-1.5">
-                                  <span className="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold">
-                                    Real-World Mental Model (Analogy)
-                                  </span>
-                                  <p className="text-sm sm:text-base text-amber-100/90 leading-relaxed font-medium">
-                                    {guide.step1_analogy}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Right Column: Mini Preview Graphic + Core Invariants */}
-                            <div className="lg:col-span-7 flex flex-col gap-4">
-                              {/* Mini Preview Graphic */}
-                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-4 shadow-xl">
-                                <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-                                  <span className="text-xs uppercase font-mono tracking-widest text-indigo-300 font-bold">
-                                    Mini Preview: How It Begins on Sample Data
-                                  </span>
-                                  <span className="text-[11px] font-mono text-gray-400">
-                                    Initial Pass Demonstration
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-xl border border-white/5 shadow-inner">
-                                  <div className="flex flex-col items-center gap-1.5">
-                                    <span className="text-xs text-gray-400 font-mono font-bold">
-                                      Unsorted Input
-                                    </span>
-                                    <div className="flex gap-2">
-                                      {guide.step1_miniBefore.map((val, idx) => (
-                                        <span
-                                          key={idx}
-                                          className="px-3.5 py-2 rounded-xl bg-slate-800 border border-white/10 text-sm sm:text-base font-mono font-black text-gray-100 shadow-md"
-                                        >
-                                          {val}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col items-center gap-1 text-center max-w-xs">
-                                    <span className="text-xs text-indigo-400 font-mono font-bold uppercase tracking-wider">
-                                      Algorithmic Action
-                                    </span>
-                                    <span className="text-xs sm:text-sm text-gray-200 font-medium leading-normal p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20">
-                                      {guide.step1_miniAction}
-                                    </span>
-                                  </div>
-
-                                  <div className="flex flex-col items-center gap-1.5">
-                                    <span className="text-xs text-emerald-400 font-mono font-bold">
-                                      After Pass Result
-                                    </span>
-                                    <div className="flex gap-2">
-                                      {guide.step1_miniAfter.map((val, idx) => (
-                                        <span
-                                          key={idx}
-                                          className={`px-3.5 py-2 rounded-xl border text-sm sm:text-base font-mono font-black shadow-md ${
-                                            idx === guide.step1_miniAfter.length - 1 || idx === 0
-                                              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-emerald-500/10"
-                                              : "bg-slate-800 border-white/10 text-gray-100"
-                                          }`}
-                                        >
-                                          {val}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Invariants & Guarantees */}
-                              <div className="p-5 rounded-2xl bg-slate-950/80 border border-indigo-500/20 flex flex-col gap-3 shadow-xl">
-                                <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold flex items-center gap-2">
-                                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                                  Core Invariants & Guarantees
-                                </span>
-                                <ul className="flex flex-col gap-2 pl-1">
-                                  {guide.invariants.map((inv, idx) => (
-                                    <li
-                                      key={idx}
-                                      className="text-xs sm:text-sm text-gray-200 flex items-start gap-2.5 font-medium leading-relaxed"
-                                    >
-                                      <span className="w-2 h-2 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
-                                      <span>{inv}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
+                              <span
+                                className={`px-3 py-1 rounded-full border font-bold ${
+                                  guide.inPlace
+                                    ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-300"
+                                    : "bg-purple-500/15 border-purple-500/30 text-purple-300"
+                                }`}
+                              >
+                                {guide.inPlace ? "In-Place O(1) Aux" : "Aux Memory Required"}
+                              </span>
                             </div>
                           </div>
-                        )}
 
-                        {/* STEP 2: How the Algorithm Decides (Side-by-Side Left & Right) */}
-                        {guidedStep === 2 && (
-                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                            {/* Left Column: Decision Comparator & Movement Logic */}
-                            <div className="lg:col-span-5 flex flex-col gap-4">
-                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-indigo-500/30 flex flex-col gap-3 shadow-xl">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-mono uppercase font-bold tracking-wider text-indigo-400">
-                                    Decision Comparator & Action
-                                  </span>
-                                  <span className="px-3 py-1 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-xs font-mono font-bold">
-                                    {guide.step2_actionType}
-                                  </span>
+                          {/* Stepper Progress Tabs */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            {[
+                              { num: 1, title: "Step 1: The Goal & Analogy", icon: Lightbulb },
+                              { num: 2, title: "Step 2: How It Decides (Swaps vs Shifts)", icon: Compass },
+                              { num: 3, title: "Step 3: Best & Worst Scenarios", icon: Scale },
+                            ].map((st) => (
+                              <button
+                                key={st.num}
+                                onClick={() => setGuidedStep(st.num as 1 | 2 | 3)}
+                                className={`flex items-center justify-start gap-3 p-3 rounded-xl border text-sm font-bold transition-all cursor-pointer select-none ${
+                                  guidedStep === st.num
+                                    ? "bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30 ring-2 ring-indigo-400/50"
+                                    : guidedStep > st.num
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                                    : "bg-slate-950/70 border-white/5 text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                                }`}
+                              >
+                                <span
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 shadow ${
+                                    guidedStep === st.num
+                                      ? "bg-white text-indigo-700 font-black"
+                                      : guidedStep > st.num
+                                      ? "bg-emerald-500 text-slate-950 font-black"
+                                      : "bg-slate-800 text-slate-400"
+                                  }`}
+                                >
+                                  {guidedStep > st.num ? "✓" : st.num}
+                                </span>
+                                <span className="truncate">{st.title}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* STEPPER BODY: Spacious Left & Right 2-Column Grid */}
+                        <div className="flex-1 min-h-[320px] sm:min-h-[360px] flex flex-col justify-start bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 gap-5 overflow-y-auto shadow-2xl">
+                          {/* STEP 1: The Goal & Analogy (Side-by-Side Left & Right) */}
+                          {guidedStep === 1 && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                              {/* Left Column: Goal Statement & Real-World Mental Model */}
+                              <div className="lg:col-span-5 flex flex-col gap-4">
+                                {/* Mission Card */}
+                                <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
+                                  <div className="flex items-center gap-2 text-indigo-400">
+                                    <Sparkle className="h-4 w-4" />
+                                    <span className="text-xs font-mono uppercase font-bold tracking-wider">
+                                      The Core Mission & Objective
+                                    </span>
+                                  </div>
+                                  <h3 className="text-lg sm:text-xl font-black text-slate-100 leading-snug">
+                                    {guide.step1_goal}
+                                  </h3>
+                                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+                                    {guide.description}
+                                  </p>
                                 </div>
-                                <h3 className="text-base sm:text-lg font-mono font-black text-emerald-400 p-3.5 bg-slate-900 rounded-xl border border-emerald-500/20 shadow-inner">
-                                  {guide.step2_decisionRule}
-                                </h3>
-                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
-                                  {guide.step2_howItDecides}
-                                </p>
+
+                                {/* Real-World Analogy Card */}
+                                <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-indigo-500/10 to-slate-950/90 border border-amber-500/30 flex items-start gap-3.5 shadow-xl">
+                                  <Lightbulb className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold">
+                                      Real-World Mental Model (Analogy)
+                                    </span>
+                                    <p className="text-sm sm:text-base text-amber-100 leading-relaxed font-medium">
+                                      {guide.step1_analogy}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
 
-                              <div className="p-5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 text-xs sm:text-sm text-gray-200 flex items-start gap-3 shadow-xl">
-                                <Compass className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
-                                <div>
-                                  <b className="text-white block mb-1 text-sm">Visualizer Movement Clues:</b>
-                                  <span>
-                                    Yellow/amber highlights indicate elements currently being evaluated in CPU registers. Red/rose animations indicate in-place exchanges, shifts, or partition relocations.
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                              {/* Right Column: Mini Preview Graphic + Core Invariants */}
+                              <div className="lg:col-span-7 flex flex-col gap-4">
+                                {/* Mini Preview Graphic */}
+                                <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-4 shadow-xl">
+                                  <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                                    <span className="text-xs uppercase font-mono tracking-widest text-indigo-300 font-bold">
+                                      Mini Preview: How It Begins on Sample Data
+                                    </span>
+                                    <span className="text-[11px] font-mono text-slate-400">
+                                      Initial Pass Demonstration
+                                    </span>
+                                  </div>
 
-                            {/* Right Column: Visualizer Legend / Cue Cards */}
-                            <div className="lg:col-span-7 flex flex-col gap-3">
-                              <span className="text-xs uppercase font-mono tracking-widest text-indigo-300 font-bold">
-                                What to Watch in the Visualizer (Visual Legend)
-                              </span>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                {guide.visualizerGuide.map((item, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="p-4 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col justify-between gap-3 shadow-xl hover:border-indigo-500/30 transition-all"
-                                  >
-                                    <div className="flex flex-col gap-2">
-                                      <span
-                                        className={`self-start text-[10px] font-mono font-bold px-2.5 py-1 rounded-md ${item.colorClass}`}
-                                      >
-                                        {item.badge}
+                                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-xl border border-white/5 shadow-inner">
+                                    <div className="flex flex-col items-center gap-1.5">
+                                      <span className="text-xs text-slate-400 font-mono font-bold">
+                                        Unsorted Input
                                       </span>
-                                      <h4 className="text-sm sm:text-base font-bold text-white">
-                                        {item.title}
-                                      </h4>
-                                      <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
-                                        {item.meaning}
-                                      </p>
+                                      <div className="flex gap-2">
+                                        {guide.step1_miniBefore.map((val, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="px-3.5 py-2 rounded-xl bg-slate-800 border border-white/10 text-sm sm:text-base font-mono font-black text-slate-100 shadow-md"
+                                          >
+                                            {val}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
-                                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-gray-300">
-                                      <b className="text-indigo-300 block mb-1 font-mono uppercase text-[10px]">
-                                        Why this step happens:
-                                      </b>
-                                      {item.why}
+
+                                    <div className="flex flex-col items-center gap-1 text-center max-w-xs">
+                                      <span className="text-xs text-indigo-400 font-mono font-bold uppercase tracking-wider">
+                                        Algorithmic Action
+                                      </span>
+                                      <span className="text-xs sm:text-sm text-slate-200 font-medium leading-normal p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20">
+                                        {guide.step1_miniAction}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex flex-col items-center gap-1.5">
+                                      <span className="text-xs text-emerald-400 font-mono font-bold">
+                                        After Pass Result
+                                      </span>
+                                      <div className="flex gap-2">
+                                        {guide.step1_miniAfter.map((val, idx) => (
+                                          <span
+                                            key={idx}
+                                            className={`px-3.5 py-2 rounded-xl border text-sm sm:text-base font-mono font-black shadow-md ${
+                                              idx === guide.step1_miniAfter.length - 1 || idx === 0
+                                                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-emerald-500/10"
+                                                : "bg-slate-800 border-white/10 text-slate-100"
+                                            }`}
+                                          >
+                                            {val}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
                                   </div>
-                                ))}
+                                </div>
+
+                                {/* Invariants & Guarantees */}
+                                <div className="p-5 rounded-2xl bg-slate-950/80 border border-indigo-500/20 flex flex-col gap-3 shadow-xl">
+                                  <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold flex items-center gap-2">
+                                    <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                                    Core Invariants & Guarantees
+                                  </span>
+                                  <ul className="flex flex-col gap-2 pl-1">
+                                    {guide.invariants.map((inv, idx) => (
+                                      <li
+                                        key={idx}
+                                        className="text-xs sm:text-sm text-slate-200 flex items-start gap-2.5 font-medium leading-relaxed"
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
+                                        <span>{inv}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* STEP 3: Best & Worst Case Scenarios (Side-by-Side Left & Right) */}
-                        {guidedStep === 3 && (
-                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                            {/* Left Column: 4 Big-O Complexity Badges + Memory Model */}
-                            <div className="lg:col-span-5 flex flex-col gap-4">
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
-                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
-                                    Best Case Time
-                                  </span>
-                                  <span className="text-lg sm:text-xl font-black text-emerald-400 font-mono">
-                                    {guide.timeBest}
-                                  </span>
+                          {/* STEP 2: How the Algorithm Decides (Side-by-Side Left & Right) */}
+                          {guidedStep === 2 && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                              {/* Left Column: Decision Comparator & Movement Logic */}
+                              <div className="lg:col-span-5 flex flex-col gap-4">
+                                <div className="p-5 rounded-2xl bg-slate-950/90 border border-indigo-500/30 flex flex-col gap-3 shadow-xl">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-mono uppercase font-bold tracking-wider text-indigo-400">
+                                      Decision Comparator & Action
+                                    </span>
+                                    <span className="px-3 py-1 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-xs font-mono font-bold">
+                                      {guide.step2_actionType}
+                                    </span>
+                                  </div>
+                                  <h3 className="text-base sm:text-lg font-mono font-black text-emerald-400 p-3.5 bg-slate-900 rounded-xl border border-emerald-500/20 shadow-inner">
+                                    {guide.step2_decisionRule}
+                                  </h3>
+                                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+                                    {guide.step2_howItDecides}
+                                  </p>
                                 </div>
-                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
-                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
-                                    Average Time
-                                  </span>
-                                  <span className="text-lg sm:text-xl font-black text-indigo-400 font-mono">
-                                    {guide.timeAvg}
-                                  </span>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
-                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
-                                    Worst Case Time
-                                  </span>
-                                  <span className="text-lg sm:text-xl font-black text-rose-400 font-mono">
-                                    {guide.timeWorst}
-                                  </span>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
-                                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider font-mono">
-                                    Space Complexity
-                                  </span>
-                                  <span className="text-lg sm:text-xl font-black text-amber-400 font-mono">
-                                    {guide.space}
-                                  </span>
+
+                                <div className="p-5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 text-xs sm:text-sm text-slate-200 flex items-start gap-3 shadow-xl">
+                                  <Compass className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
+                                  <div>
+                                    <b className="text-slate-100 block mb-1 text-sm">Visualizer Movement Clues:</b>
+                                    <span>
+                                      Yellow/amber highlights indicate elements currently being evaluated in CPU registers. Red/rose animations indicate in-place exchanges, shifts, or partition relocations.
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Memory & Stability Breakdown */}
-                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
-                                <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold flex items-center gap-2">
-                                  <Scale className="h-4 w-4 text-indigo-400" />
-                                  Memory Architecture & Stability
+                              {/* Right Column: Visualizer Legend / Cue Cards */}
+                              <div className="lg:col-span-7 flex flex-col gap-3">
+                                <span className="text-xs uppercase font-mono tracking-widest text-indigo-300 font-bold">
+                                  What to Watch in the Visualizer (Visual Legend)
                                 </span>
-                                <div className="text-xs sm:text-sm text-gray-200 flex flex-col gap-2 font-medium leading-relaxed">
-                                  <p><b>Auxiliary Space:</b> {guide.whySpace}</p>
-                                  <p>
-                                    <b>Stability:</b>{" "}
-                                    {guide.stable
-                                      ? "Guaranteed stable — duplicate values preserve their original relative order."
-                                      : "Unstable — duplicate values may change relative order due to distant swaps."}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                  {guide.visualizerGuide.map((item, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="p-4 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col justify-between gap-3 shadow-xl hover:border-indigo-500/30 transition-all"
+                                    >
+                                      <div className="flex flex-col gap-2">
+                                        <span
+                                          className={`self-start text-[10px] font-mono font-bold px-2.5 py-1 rounded-md ${item.colorClass}`}
+                                        >
+                                          {item.badge}
+                                        </span>
+                                        <h4 className="text-sm sm:text-base font-bold text-slate-100">
+                                          {item.title}
+                                        </h4>
+                                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                                          {item.meaning}
+                                        </p>
+                                      </div>
+                                      <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-slate-300">
+                                        <b className="text-indigo-300 block mb-1 font-mono uppercase text-[10px]">
+                                          Why this step happens:
+                                        </b>
+                                        {item.why}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* STEP 3: Best & Worst Case Scenarios (Side-by-Side Left & Right) */}
+                          {guidedStep === 3 && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                              {/* Left Column: 4 Big-O Complexity Badges + Memory Model */}
+                              <div className="lg:col-span-5 flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider font-mono">
+                                      Best Case Time
+                                    </span>
+                                    <span className="text-lg sm:text-xl font-black text-emerald-400 font-mono">
+                                      {guide.timeBest}
+                                    </span>
+                                  </div>
+                                  <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider font-mono">
+                                      Average Time
+                                    </span>
+                                    <span className="text-lg sm:text-xl font-black text-indigo-400 font-mono">
+                                      {guide.timeAvg}
+                                    </span>
+                                  </div>
+                                  <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider font-mono">
+                                      Worst Case Time
+                                    </span>
+                                    <span className="text-lg sm:text-xl font-black text-rose-400 font-mono">
+                                      {guide.timeWorst}
+                                    </span>
+                                  </div>
+                                  <div className="p-4 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-1 shadow-xl">
+                                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider font-mono">
+                                      Space Complexity
+                                    </span>
+                                    <span className="text-lg sm:text-xl font-black text-amber-400 font-mono">
+                                      {guide.space}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Memory & Stability Breakdown */}
+                                <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
+                                  <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold flex items-center gap-2">
+                                    <Scale className="h-4 w-4 text-indigo-400" />
+                                    Memory Architecture & Stability
+                                  </span>
+                                  <div className="text-xs sm:text-sm text-slate-300 flex flex-col gap-2 font-medium leading-relaxed">
+                                    <p><b>Auxiliary Space:</b> {guide.whySpace}</p>
+                                    <p>
+                                      <b>Stability:</b>{" "}
+                                      {guide.stable
+                                        ? "Guaranteed stable — duplicate values preserve their original relative order."
+                                        : "Unstable — duplicate values may change relative order due to distant swaps."}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Best vs Worst Case Explanations */}
+                              <div className="lg:col-span-7 flex flex-col gap-4">
+                                <div className="p-5 rounded-2xl bg-slate-950/90 border border-emerald-500/30 flex flex-col gap-2.5 shadow-xl">
+                                  <div className="flex items-center gap-2.5 border-b border-emerald-500/20 pb-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50" />
+                                    <span className="text-xs sm:text-sm font-mono font-black text-emerald-400 uppercase tracking-wide">
+                                      Best-Case Scenario: {guide.step3_bestTitle}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+                                    {guide.step3_bestDetails}
+                                  </p>
+                                </div>
+
+                                <div className="p-5 rounded-2xl bg-slate-950/90 border border-rose-500/30 flex flex-col gap-2.5 shadow-xl">
+                                  <div className="flex items-center gap-2.5 border-b border-rose-500/20 pb-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-md shadow-rose-400/50" />
+                                    <span className="text-xs sm:text-sm font-mono font-black text-rose-400 uppercase tracking-wide">
+                                      Worst-Case Scenario: {guide.step3_worstTitle}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+                                    {guide.step3_worstDetails}
                                   </p>
                                 </div>
                               </div>
                             </div>
+                          )}
+                        </div>
 
-                            {/* Right Column: Best vs Worst Case Explanations */}
-                            <div className="lg:col-span-7 flex flex-col gap-4">
-                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-emerald-500/30 flex flex-col gap-2.5 shadow-xl">
-                                <div className="flex items-center gap-2.5 border-b border-emerald-500/20 pb-2">
-                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50" />
-                                  <span className="text-xs sm:text-sm font-mono font-black text-emerald-400 uppercase tracking-wide">
-                                    Best-Case Scenario: {guide.step3_bestTitle}
-                                  </span>
-                                </div>
-                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
-                                  {guide.step3_bestDetails}
-                                </p>
-                              </div>
-
-                              <div className="p-5 rounded-2xl bg-slate-950/90 border border-rose-500/30 flex flex-col gap-2.5 shadow-xl">
-                                <div className="flex items-center gap-2.5 border-b border-rose-500/20 pb-2">
-                                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-md shadow-rose-400/50" />
-                                  <span className="text-xs sm:text-sm font-mono font-black text-rose-400 uppercase tracking-wide">
-                                    Worst-Case Scenario: {guide.step3_worstTitle}
-                                  </span>
-                                </div>
-                                <p className="text-sm sm:text-base text-gray-200 leading-relaxed font-normal">
-                                  {guide.step3_worstDetails}
-                                </p>
-                              </div>
-                            </div>
+                        {/* STEPPER FOOTER NAVIGATION */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl shrink-0 shadow-2xl mt-auto">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                            {guidedStep > 1 && (
+                              <button
+                                onClick={() => setGuidedStep((guidedStep - 1) as 1 | 2 | 3)}
+                                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center gap-2 shadow"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                                <span>Previous Step</span>
+                              </button>
+                            )}
+                            {guidedStep < 3 && (
+                              <button
+                                onClick={() => setGuidedStep((guidedStep + 1) as 1 | 2 | 3)}
+                                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/30"
+                              >
+                                <span>Next: Step {guidedStep + 1}</span>
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* STEPPER FOOTER NAVIGATION */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl shrink-0 shadow-2xl">
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                          {guidedStep > 1 && (
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
                             <button
-                              onClick={() => setGuidedStep((guidedStep - 1) as 1 | 2 | 3)}
-                              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-gray-100 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center gap-2 shadow"
+                              onClick={async () => {
+                                setViewMode("visualizer");
+                                setIsConfigCollapsed(true);
+                                if (steps.length === 0) {
+                                  await startSorting();
+                                }
+                                setIsPlaying(false);
+                                setCurrentStepIndex(0);
+                              }}
+                              className="flex-1 sm:flex-initial px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center justify-center gap-2 shadow"
                             >
-                              <ChevronLeft className="h-4 w-4" />
-                              <span>Previous Step</span>
+                              <RotateCcw className="h-4 w-4" />
+                              <span>Step-by-Step</span>
                             </button>
-                          )}
-                          {guidedStep < 3 && (
+
                             <button
-                              onClick={() => setGuidedStep((guidedStep + 1) as 1 | 2 | 3)}
-                              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/30"
+                              onClick={async () => {
+                                setViewMode("visualizer");
+                                setIsConfigCollapsed(true);
+                                if (steps.length === 0) {
+                                  await startSorting();
+                                }
+                                setIsPlaying(true);
+                              }}
+                              className="flex-1 sm:flex-initial px-8 py-3 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-sm sm:text-base rounded-xl shadow-xl shadow-indigo-600/30 cursor-pointer flex items-center justify-center gap-2.5 transition-all transform hover:scale-[1.02]"
                             >
-                              <span>Next: Step {guidedStep + 1}</span>
-                              <ChevronRight className="h-4 w-4" />
+                              <Zap className="h-4 w-4 animate-pulse" />
+                              <span>Start Visualization</span>
                             </button>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                          <button
-                            onClick={async () => {
-                              setViewMode("visualizer");
-                              setIsConfigCollapsed(true);
-                              if (steps.length === 0) {
-                                await startSorting();
-                              }
-                              setIsPlaying(false);
-                              setCurrentStepIndex(0);
-                            }}
-                            className="flex-1 sm:flex-initial px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-gray-200 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center justify-center gap-2 shadow"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                            <span>Step-by-Step</span>
-                          </button>
-
-                          <button
-                            onClick={async () => {
-                              setViewMode("visualizer");
-                              setIsConfigCollapsed(true);
-                              if (steps.length === 0) {
-                                await startSorting();
-                              }
-                              setIsPlaying(true);
-                            }}
-                            className="flex-1 sm:flex-initial px-8 py-3 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-sm sm:text-base rounded-xl shadow-xl shadow-indigo-600/30 cursor-pointer flex items-center justify-center gap-2.5 transition-all transform hover:scale-[1.02]"
-                          >
-                            <Zap className="h-4 w-4 animate-pulse" />
-                            <span>Start Visualization</span>
-                          </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })()
-              ) : (
+                    );
+                  })()
+                ) : (
                 <div
                   className={`flex-1 min-h-0 ${
                     battleMode
