@@ -2779,19 +2779,41 @@ function SortMentorContent() {
 
                       <div className="w-[1px] h-4 bg-white/10 mx-1 hidden sm:block" />
 
-                      {/* Speed Slider */}
-                      <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
-                        <span className="w-10 text-right">{speed}ms</span>
-                        <input
-                          type="range"
-                          min="20"
-                          max="800"
-                          step="20"
-                          value={speed}
-                          onChange={(e) => setSpeed(Number(e.target.value))}
-                          className="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          title="Playback Speed (ms delay)"
-                        />
+                      {/* Speed Controls with Presets */}
+                      <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-400 font-mono">
+                        <div className="flex items-center gap-1 bg-slate-950/60 px-1.5 py-0.5 rounded-lg border border-white/5">
+                          <span className="w-12 text-center text-slate-200 font-bold">{speed}ms</span>
+                          <input
+                            type="range"
+                            min="50"
+                            max="1200"
+                            step="50"
+                            value={speed}
+                            onChange={(e) => setSpeed(Number(e.target.value))}
+                            className="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            title="Playback Speed (ms delay between steps)"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {[
+                            { label: "0.5x", val: 800 },
+                            { label: "1x", val: 400 },
+                            { label: "2x", val: 200 },
+                          ].map((p) => (
+                            <button
+                              key={p.label}
+                              onClick={() => setSpeed(p.val)}
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-all ${
+                                speed === p.val
+                                  ? "bg-indigo-600 text-white shadow-sm"
+                                  : "bg-slate-950/60 hover:bg-slate-800 text-slate-400 hover:text-white border border-white/5"
+                              }`}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 

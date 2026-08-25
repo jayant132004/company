@@ -58,7 +58,7 @@ export const useSortStore = create<SortState>((set) => ({
   steps: [],
   currentStepIndex: -1,
   isPlaying: false,
-  speed: 150,
+  speed: 400,
   metrics: null,
   
   // Battle Arena defaults
