@@ -2458,9 +2458,9 @@ function SortMentorContent() {
             viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
           }`}
         >
-          {/* Top Quick Settings Bar (Collapsible) */}
+          {/* Top Quick Settings Bar (Collapsible - only in intro mode) */}
           <AnimatePresence initial={false}>
-            {isConfigCollapsed && !isFullscreen && (
+            {isConfigCollapsed && !isFullscreen && viewMode === "intro" && (
               <motion.div
                 initial={{ height: 0, opacity: 0, y: -6 }}
                 animate={{ height: "auto", opacity: 1, y: 0 }}
@@ -2655,7 +2655,7 @@ function SortMentorContent() {
 
           {/* Unified Visualizer & Side-by-Side Explanation Area */}
             <div
-              ref={visualizerCardRef}
+            ref={visualizerCardRef}
               className={`flex-1 flex flex-col min-h-0 bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl ${
                 viewMode === "intro" ? "overflow-y-auto min-h-fit" : "overflow-hidden"
               } ${
@@ -2664,20 +2664,20 @@ function SortMentorContent() {
                   : "relative"
               }`}
             >
-              {/* Top Toolbar Header (Contains Playback Controls, Timeline, Zoom & Tools - only visible in visualizer/battle mode) */}
+              {/* Top Toolbar Header (Contains Playback Controls, Telemetry Pills, Timeline & Tools) */}
               {(viewMode === "visualizer" || battleMode) && (
-                <div className="px-4 py-2.5 border-b border-white/5 bg-slate-950/50 flex flex-col gap-2 shrink-0">
+                <div className="px-4 py-2.5 border-b border-white/5 bg-slate-950/70 backdrop-blur-md flex flex-col gap-2 shrink-0 shadow-lg">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    {/* Left: Algorithm Name & Execution Metrics */}
-                    <div className="flex items-center gap-3">
+                    {/* Left: Algorithm Name & Live Telemetry Pills */}
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                        <span className="text-sm font-bold text-white uppercase font-mono">
-                          {algorithm} Sort
+                        <span className="text-sm font-black text-white uppercase font-mono tracking-tight">
+                          {algorithm}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400">
                         <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/5">
                           Step: <b className="text-white">{stats.step}</b>
                         </span>
@@ -2688,21 +2688,43 @@ function SortMentorContent() {
                           Swaps: <b className="text-rose-400">{stats.swaps}</b>
                         </span>
                       </div>
+
+                      {/* Live Telemetry Pills Inline */}
+                      <div className="hidden xl:flex items-center gap-1.5 font-mono text-[10px]">
+                        <span className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold uppercase">
+                          {steps[currentStepIndex]?.event_type || "READY"}
+                        </span>
+                        {steps[currentStepIndex]?.compare && steps[currentStepIndex].compare.length > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
+                            CMP: [{steps[currentStepIndex].compare.join(",")}]
+                          </span>
+                        )}
+                        {steps[currentStepIndex]?.swap && steps[currentStepIndex].swap.length > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-300 font-bold">
+                            SWP: [{steps[currentStepIndex].swap.join(",")}]
+                          </span>
+                        )}
+                        {steps[currentStepIndex]?.pivot !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-bold">
+                            PIV: {steps[currentStepIndex].pivot}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Center: Playback Controls */}
-                    <div className="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-xl border border-white/10 shadow-inner">
                       <button
                         onClick={startSorting}
                         disabled={isLoadingVisuals}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white disabled:opacity-40 shadow-md shadow-indigo-600/20 cursor-pointer transition-all shrink-0"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white disabled:opacity-40 shadow-md shadow-indigo-600/30 cursor-pointer transition-all shrink-0"
                       >
                         {isLoadingVisuals ? (
                           <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
                         ) : (
-                          <Zap className="h-3 w-3" />
+                          <Zap className="h-3.5 w-3.5" />
                         )}
-                        Run
+                        <span>Run</span>
                       </button>
 
                       <div className="w-[1px] h-4 bg-white/10 mx-1" />
@@ -2730,7 +2752,7 @@ function SortMentorContent() {
                       <button
                         onClick={() => steps.length > 0 && setIsPlaying(!isPlaying)}
                         disabled={steps.length === 0}
-                        className="p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition-all"
+                        className="p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition-all shadow-sm"
                         title={isPlaying ? "Pause" : "Play"}
                       >
                         {isPlaying ? (
@@ -2755,63 +2777,78 @@ function SortMentorContent() {
                         <ChevronRight className="h-3.5 w-3.5" />
                       </button>
 
-                      <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                      <div className="w-[1px] h-4 bg-white/10 mx-1 hidden sm:block" />
 
-                      {/* Speed slider in header */}
-                      <div className="flex items-center gap-1.5 text-[9px] font-mono text-gray-400">
-                        <span>{speed}ms</span>
+                      {/* Speed Slider */}
+                      <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
+                        <span className="w-10 text-right">{speed}ms</span>
                         <input
                           type="range"
-                          min="50"
-                          max="1500"
-                          value={displaySpeed}
-                          onChange={(e) => setSpeed(1550 - Number(e.target.value))}
-                          disabled={steps.length === 0}
-                          className="w-16 accent-indigo-500 cursor-pointer"
-                          title="Adjust playback delay"
+                          min="20"
+                          max="800"
+                          step="20"
+                          value={speed}
+                          onChange={(e) => setSpeed(Number(e.target.value))}
+                          className="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                          title="Playback Speed (ms delay)"
                         />
                       </div>
                     </div>
 
-                    {/* Right: Zoom, Fullscreen & Export Controls */}
-                    <div className="flex items-center gap-1 shrink-0">
+                    {/* Right: AI Explain, Settings Toggle, Tools & Zoom */}
+                    <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() =>
-                          setViewMode(viewMode === "intro" ? "visualizer" : "intro")
-                        }
-                        className={`p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white transition-all cursor-pointer ${
-                          viewMode === "intro"
-                            ? "text-indigo-400 bg-indigo-500/10"
-                            : ""
-                        }`}
-                        title="Toggle Explanation & Guide"
+                        onClick={explainCurrentStep}
+                        disabled={steps.length === 0}
+                        className="px-2.5 py-1.5 bg-gradient-to-r from-indigo-600/30 to-pink-600/30 hover:from-indigo-600 hover:to-pink-600 border border-indigo-500/40 text-indigo-200 hover:text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1.5 transition-all shadow-sm"
+                        title="Ask AI Tutor to explain current step"
                       >
-                        <BookOpen className="h-3.5 w-3.5" />
+                        <BrainCircuit className="h-3.5 w-3.5 text-indigo-300" />
+                        <span className="hidden sm:inline">Explain</span>
                       </button>
 
-                      <div className="flex items-center bg-slate-900/60 rounded-lg px-1 py-0.5 border border-white/5">
+                      <button
+                        onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
+                        className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer transition-all"
+                        title="Customize Dataset & Settings"
+                      >
+                        <Sliders className="h-3.5 w-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => setViewMode(viewMode === "intro" ? "visualizer" : "intro")}
+                        className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer transition-all"
+                        title={viewMode === "intro" ? "Open Visualizer" : "Open 3-Step Guide"}
+                      >
+                        <GraduationCap className="h-3.5 w-3.5" />
+                      </button>
+
+                      <div className="w-[1px] h-4 bg-white/10 mx-0.5" />
+
+                      {/* Zoom Controls */}
+                      <div className="flex items-center bg-slate-900 rounded-lg border border-white/5 p-0.5">
                         <button
-                          onClick={() => setZoom((prev) => Math.max(0.6, prev - 0.1))}
-                          className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                          onClick={() => setZoom(Math.max(0.6, zoom - 0.1))}
+                          className="p-1 text-gray-400 hover:text-white rounded hover:bg-slate-800"
                           title="Zoom Out"
                         >
-                          <ZoomOut className="h-3.5 w-3.5" />
+                          <ZoomOut className="h-3 w-3" />
                         </button>
-                        <span className="text-[9px] font-mono text-gray-500 px-1 select-none">
+                        <span className="text-[10px] font-mono text-gray-400 px-1 select-none">
                           {Math.round(zoom * 100)}%
                         </span>
                         <button
-                          onClick={() => setZoom((prev) => Math.min(1.4, prev + 0.1))}
-                          className="p-1 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                          onClick={() => setZoom(Math.min(1.6, zoom + 0.1))}
+                          className="p-1 text-gray-400 hover:text-white rounded hover:bg-slate-800"
                           title="Zoom In"
                         >
-                          <ZoomIn className="h-3.5 w-3.5" />
+                          <ZoomIn className="h-3 w-3" />
                         </button>
                       </div>
 
                       <button
                         onClick={() => setIsFullscreen(!isFullscreen)}
-                        className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                        className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer"
                         title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                       >
                         {isFullscreen ? (
@@ -2823,7 +2860,8 @@ function SortMentorContent() {
 
                       <button
                         onClick={exportReplay}
-                        className="p-1.5 rounded hover:bg-slate-800 text-gray-400 hover:text-white cursor-pointer"
+                        disabled={steps.length === 0}
+                        className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer disabled:opacity-40"
                         title="Export Replay JSON"
                       >
                         <Download className="h-3.5 w-3.5" />
@@ -3327,67 +3365,7 @@ function SortMentorContent() {
                   } h-full overflow-hidden`}
                 >
                   {/* Primary Visualizer Card */}
-                  <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-3 border border-white/5 flex flex-col justify-between overflow-hidden">
-                    {/* Top Live State Variables & Legend Strip */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/10 font-mono text-[11px] mb-2 shrink-0 select-none shadow-lg">
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-indigo-500/20 shadow-inner">
-                          <span className="text-slate-400 text-[10px] uppercase font-bold">Event:</span>
-                          <span className="text-indigo-400 font-extrabold uppercase tracking-wide">
-                            {steps[currentStepIndex]?.event_type || "READY"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-amber-500/20 shadow-inner">
-                          <span className="text-slate-400 text-[10px] uppercase font-bold">Compare:</span>
-                          <span className="text-amber-400 font-extrabold">
-                            {steps[currentStepIndex]?.compare && steps[currentStepIndex].compare.length > 0
-                              ? `[${steps[currentStepIndex].compare.join(", ")}]`
-                              : "None"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-rose-500/20 shadow-inner">
-                          <span className="text-slate-400 text-[10px] uppercase font-bold">Swap / Shift:</span>
-                          <span className="text-rose-400 font-extrabold">
-                            {steps[currentStepIndex]?.swap && steps[currentStepIndex].swap.length > 0
-                              ? `[${steps[currentStepIndex].swap.join(", ")}]`
-                              : "None"}
-                          </span>
-                        </div>
-                        {steps[currentStepIndex]?.pivot !== undefined && (
-                          <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-cyan-500/20 shadow-inner">
-                            <span className="text-slate-400 text-[10px] uppercase font-bold">Pivot:</span>
-                            <span className="text-cyan-400 font-extrabold">
-                              {steps[currentStepIndex].pivot}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Inline Legend & Quick AI Explain */}
-                      <div className="flex items-center gap-3">
-                        {ALGO_LEGENDS[algorithm.toLowerCase()] && (
-                          <div className="hidden md:flex flex-wrap items-center gap-2.5 text-[10px]">
-                            {ALGO_LEGENDS[algorithm.toLowerCase()].map((item, idx) => (
-                              <span key={idx} className="flex items-center gap-1.5 text-slate-300 font-medium">
-                                <span className={`w-2.5 h-2.5 rounded-full ${item.color.split(" ")[0]} shadow-sm`} />
-                                <span>{item.label}</span>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <button
-                          onClick={explainCurrentStep}
-                          disabled={steps.length === 0}
-                          className="px-3 py-1.5 bg-gradient-to-r from-indigo-600/40 to-pink-600/40 hover:from-indigo-600 hover:to-pink-600 border border-indigo-500/40 text-indigo-100 hover:text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1.5 transition-all shadow-md"
-                          title="Ask AI Tutor to explain current step"
-                        >
-                          <BrainCircuit className="h-3.5 w-3.5 text-indigo-300" />
-                          <span>Explain Step</span>
-                        </button>
-                      </div>
-                    </div>
-
+                  <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-2 sm:p-3 border border-white/5 flex flex-col justify-between overflow-hidden">
                     {executionError && (
                       <div className="mb-2 p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium">
                         <span className="flex items-center gap-2">
@@ -3404,7 +3382,7 @@ function SortMentorContent() {
                     )}
 
                     {/* Canvas Stage */}
-                    <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden py-1">
+                    <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden">
                       <VisualizerFactory
                         array={array}
                         originalArray={originalArray}
