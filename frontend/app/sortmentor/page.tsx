@@ -1531,7 +1531,7 @@ function SortMentorContent() {
   const [viewMode, setViewMode] = useState<"intro" | "visualizer">("intro");
   const [guidedStep, setGuidedStep] = useState<1 | 2 | 3>(1);
   const [introTab, setIntroTab] = useState<"process" | "visualizer_guide" | "complexity" | "code">("process");
-  const [isConfigCollapsed, setIsConfigCollapsed] = useState<boolean>(false);
+  const [isConfigCollapsed, setIsConfigCollapsed] = useState<boolean>(true);
   const visualizerCardRef = useRef<HTMLDivElement>(null);
   const [hoveredStepIdx, setHoveredStepIdx] = useState<number | null>(null);
   const [tooltipX, setTooltipX] = useState<number>(0);
@@ -2875,14 +2875,41 @@ function SortMentorContent() {
                     const guide = ALGO_GUIDES[algorithm.toLowerCase()] || ALGO_GUIDES.bubble;
                     return (
                       <div className="flex-1 min-h-fit flex flex-col justify-start w-full max-w-7xl mx-auto gap-4 p-1 sm:p-2">
-                        {/* TOP HEADER: Algorithm Profile & 3-Step Stepper Bar */}
-                        <div className="flex flex-col gap-3.5 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shrink-0 shadow-2xl">
-                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3.5">
+                        {/* TOP HEADER: Algorithm Profile, Quick Switcher & 3-Step Stepper Bar */}
+                        <div className="flex flex-col gap-4 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shrink-0 shadow-2xl">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                             <div className="flex flex-wrap items-center gap-3">
                               <span className="w-3.5 h-3.5 rounded-full bg-indigo-500 animate-pulse shadow-lg shadow-indigo-500/50" />
-                              <h2 className="text-2xl sm:text-3xl font-black text-slate-100 uppercase tracking-tight font-sans">
-                                {guide.name}
-                              </h2>
+                              <div className="flex items-center gap-2">
+                                <h2 className="text-2xl sm:text-3xl font-black text-slate-100 uppercase tracking-tight font-sans">
+                                  {guide.name}
+                                </h2>
+                                <select
+                                  value={algorithm}
+                                  onChange={(e) => {
+                                    setAlgorithm(e.target.value);
+                                    setViewMode("intro");
+                                    setGuidedStep(1);
+                                    setIsPlaying(false);
+                                    setSteps([]);
+                                    setCurrentStepIndex(0);
+                                  }}
+                                  className="bg-slate-950/80 hover:bg-slate-900 border border-indigo-500/30 rounded-xl px-2.5 py-1 text-xs font-bold text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer transition-all shadow-md ml-1"
+                                  title="Switch Algorithm"
+                                >
+                                  <option value="bubble">Bubble Sort</option>
+                                  <option value="selection">Selection Sort</option>
+                                  <option value="insertion">Insertion Sort</option>
+                                  <option value="merge">Merge Sort</option>
+                                  <option value="quick">Quick Sort</option>
+                                  <option value="heap">Heap Sort</option>
+                                  <option value="counting">Counting Sort</option>
+                                  <option value="radix">Radix Sort</option>
+                                  <option value="bucket">Bucket Sort</option>
+                                  <option value="shell">Shell Sort</option>
+                                  <option value="timsort">Tim Sort</option>
+                                </select>
+                              </div>
                               <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm">
                                 {guide.category}
                               </span>
@@ -2911,16 +2938,16 @@ function SortMentorContent() {
                           </div>
 
                           {/* Stepper Progress Tabs */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {[
-                              { num: 1, title: "Step 1: The Goal & Analogy", icon: Lightbulb },
-                              { num: 2, title: "Step 2: How It Decides (Swaps vs Shifts)", icon: Compass },
-                              { num: 3, title: "Step 3: Best & Worst Scenarios", icon: Scale },
+                              { num: 1, title: "1. The Goal & Analogy", subtitle: "Core purpose & mental model", icon: Lightbulb },
+                              { num: 2, title: "2. How It Decides", subtitle: "Swaps, shifts & visual cues", icon: Compass },
+                              { num: 3, title: "3. Complexity & Cases", subtitle: "Big-O & edge scenarios", icon: Scale },
                             ].map((st) => (
                               <button
                                 key={st.num}
                                 onClick={() => setGuidedStep(st.num as 1 | 2 | 3)}
-                                className={`flex items-center justify-start gap-3 p-3 rounded-xl border text-sm font-bold transition-all cursor-pointer select-none ${
+                                className={`flex items-center justify-start gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer select-none text-left ${
                                   guidedStep === st.num
                                     ? "bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30 ring-2 ring-indigo-400/50"
                                     : guidedStep > st.num
@@ -2929,9 +2956,9 @@ function SortMentorContent() {
                                 }`}
                               >
                                 <span
-                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 shadow ${
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 shadow ${
                                     guidedStep === st.num
-                                      ? "bg-white text-indigo-700 font-black"
+                                      ? "bg-white text-indigo-700 font-black shadow-md"
                                       : guidedStep > st.num
                                       ? "bg-emerald-500 text-slate-950 font-black"
                                       : "bg-slate-800 text-slate-400"
@@ -2939,7 +2966,12 @@ function SortMentorContent() {
                                 >
                                   {guidedStep > st.num ? "✓" : st.num}
                                 </span>
-                                <span className="truncate">{st.title}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm font-bold truncate">{st.title}</span>
+                                  <span className={`text-[11px] truncate ${guidedStep === st.num ? "text-indigo-200" : "text-slate-400"}`}>
+                                    {st.subtitle}
+                                  </span>
+                                </div>
                               </button>
                             ))}
                           </div>
@@ -2955,7 +2987,9 @@ function SortMentorContent() {
                                 {/* Mission Card */}
                                 <div className="p-5 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col gap-3 shadow-xl">
                                   <div className="flex items-center gap-2 text-indigo-400">
-                                    <Sparkle className="h-4 w-4" />
+                                    <div className="p-1 rounded-md bg-indigo-500/20 border border-indigo-500/30">
+                                      <Sparkle className="h-3.5 w-3.5" />
+                                    </div>
                                     <span className="text-xs font-mono uppercase font-bold tracking-wider">
                                       The Core Mission & Objective
                                     </span>
@@ -2970,7 +3004,9 @@ function SortMentorContent() {
 
                                 {/* Real-World Analogy Card */}
                                 <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-indigo-500/10 to-slate-950/90 border border-amber-500/30 flex items-start gap-3.5 shadow-xl">
-                                  <Lightbulb className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
+                                  <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shrink-0 mt-0.5">
+                                    <Lightbulb className="h-5 w-5 text-amber-400" />
+                                  </div>
                                   <div className="flex flex-col gap-1.5">
                                     <span className="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold">
                                       Real-World Mental Model (Analogy)
@@ -3016,7 +3052,7 @@ function SortMentorContent() {
                                       <span className="text-xs text-indigo-400 font-mono font-bold uppercase tracking-wider">
                                         Algorithmic Action
                                       </span>
-                                      <span className="text-xs sm:text-sm text-slate-200 font-medium leading-normal p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20">
+                                      <span className="text-xs sm:text-sm text-slate-200 font-medium leading-normal p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20 shadow-sm">
                                         {guide.step1_miniAction}
                                       </span>
                                     </div>
@@ -3293,24 +3329,24 @@ function SortMentorContent() {
                   {/* Primary Visualizer Card */}
                   <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-3 border border-white/5 flex flex-col justify-between overflow-hidden">
                     {/* Top Live State Variables & Legend Strip */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-white/5 font-mono text-[11px] mb-2 shrink-0 select-none">
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/10 font-mono text-[11px] mb-2 shrink-0 select-none shadow-lg">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
-                          <span className="text-gray-400 text-[10px] uppercase font-bold">Event:</span>
+                        <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-indigo-500/20 shadow-inner">
+                          <span className="text-slate-400 text-[10px] uppercase font-bold">Event:</span>
                           <span className="text-indigo-400 font-extrabold uppercase tracking-wide">
                             {steps[currentStepIndex]?.event_type || "READY"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
-                          <span className="text-gray-400 text-[10px] uppercase font-bold">Compare:</span>
+                        <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-amber-500/20 shadow-inner">
+                          <span className="text-slate-400 text-[10px] uppercase font-bold">Compare:</span>
                           <span className="text-amber-400 font-extrabold">
                             {steps[currentStepIndex]?.compare && steps[currentStepIndex].compare.length > 0
                               ? `[${steps[currentStepIndex].compare.join(", ")}]`
                               : "None"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
-                          <span className="text-gray-400 text-[10px] uppercase font-bold">Swap / Shift:</span>
+                        <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-rose-500/20 shadow-inner">
+                          <span className="text-slate-400 text-[10px] uppercase font-bold">Swap / Shift:</span>
                           <span className="text-rose-400 font-extrabold">
                             {steps[currentStepIndex]?.swap && steps[currentStepIndex].swap.length > 0
                               ? `[${steps[currentStepIndex].swap.join(", ")}]`
@@ -3318,8 +3354,8 @@ function SortMentorContent() {
                           </span>
                         </div>
                         {steps[currentStepIndex]?.pivot !== undefined && (
-                          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
-                            <span className="text-gray-400 text-[10px] uppercase font-bold">Pivot:</span>
+                          <div className="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1 rounded-lg border border-cyan-500/20 shadow-inner">
+                            <span className="text-slate-400 text-[10px] uppercase font-bold">Pivot:</span>
                             <span className="text-cyan-400 font-extrabold">
                               {steps[currentStepIndex].pivot}
                             </span>
@@ -3330,10 +3366,10 @@ function SortMentorContent() {
                       {/* Inline Legend & Quick AI Explain */}
                       <div className="flex items-center gap-3">
                         {ALGO_LEGENDS[algorithm.toLowerCase()] && (
-                          <div className="hidden md:flex flex-wrap items-center gap-2 text-[10px]">
+                          <div className="hidden md:flex flex-wrap items-center gap-2.5 text-[10px]">
                             {ALGO_LEGENDS[algorithm.toLowerCase()].map((item, idx) => (
-                              <span key={idx} className="flex items-center gap-1 text-gray-300">
-                                <span className={`w-2 h-2 rounded-full ${item.color.split(" ")[0]}`} />
+                              <span key={idx} className="flex items-center gap-1.5 text-slate-300 font-medium">
+                                <span className={`w-2.5 h-2.5 rounded-full ${item.color.split(" ")[0]} shadow-sm`} />
                                 <span>{item.label}</span>
                               </span>
                             ))}
@@ -3343,24 +3379,24 @@ function SortMentorContent() {
                         <button
                           onClick={explainCurrentStep}
                           disabled={steps.length === 0}
-                          className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1 transition-all"
+                          className="px-3 py-1.5 bg-gradient-to-r from-indigo-600/40 to-pink-600/40 hover:from-indigo-600 hover:to-pink-600 border border-indigo-500/40 text-indigo-100 hover:text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-40 select-none flex items-center gap-1.5 transition-all shadow-md"
                           title="Ask AI Tutor to explain current step"
                         >
-                          <BrainCircuit className="h-3 w-3" />
+                          <BrainCircuit className="h-3.5 w-3.5 text-indigo-300" />
                           <span>Explain Step</span>
                         </button>
                       </div>
                     </div>
 
                     {executionError && (
-                      <div className="mb-2 p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center justify-between text-xs text-rose-300 font-medium">
-                        <span className="flex items-center gap-1.5">
-                          <AlertCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                      <div className="mb-2 p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium">
+                        <span className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
                           {executionError}
                         </span>
                         <button
                           onClick={startSorting}
-                          className="px-2 py-0.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold cursor-pointer transition-all"
+                          className="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold cursor-pointer transition-all"
                         >
                           Retry
                         </button>
@@ -3395,12 +3431,19 @@ function SortMentorContent() {
                       />
                     </div>
 
-                    {/* Live State Action Summary Bar */}
-                    <div className="pt-2 text-center shrink-0 border-t border-white/5 mt-1">
-                      <span className="text-xs text-indigo-300 font-mono block truncate">
-                        {steps[currentStepIndex]?.message ||
-                          "Ready. Click Run to start sorting."}
-                      </span>
+                    {/* Live State Action Banner */}
+                    <div className="px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/5 shadow-lg flex items-center justify-between gap-3 shrink-0 mt-1.5 select-none">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 shadow-sm shadow-emerald-400/50" />
+                        <span className="text-xs font-mono font-medium text-slate-200 truncate">
+                          {steps[currentStepIndex]?.message || "Ready. Click Run to start visual execution."}
+                        </span>
+                      </div>
+                      {steps.length > 0 && (
+                        <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 shrink-0">
+                          {Math.round(((currentStepIndex + 1) / steps.length) * 100)}% Complete
+                        </span>
+                      )}
                     </div>
                   </div>
 

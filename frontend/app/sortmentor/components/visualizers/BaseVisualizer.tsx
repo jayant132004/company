@@ -58,8 +58,8 @@ export const getNormalizedHeight = (val: number, originalArray: number[]): strin
   const maxVal = Math.max(...originalArray, 1);
   const range = maxVal - minVal;
   if (range === 0) return "50%";
-  // Safe scaling: minimum 20% height, maximum 78% height to leave room for badges/keys
-  const percentage = ((val - minVal) / range) * 58 + 20;
+  // Safe scaling: minimum 24% height, maximum 82% height to ensure value numbers never clip
+  const percentage = ((val - minVal) / range) * 58 + 24;
   return `${percentage}%`;
 };
 
