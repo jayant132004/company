@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../../context/useAuthStore";
 import { db } from "../../firebase/clientApp";
 import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
@@ -19,6 +19,14 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Settings State Variables
   const [accentColor, setAccentColor] = useState("indigo");
@@ -118,13 +126,21 @@ export default function SettingsPage() {
     }
   };
 
-  // Privacy Actions
+  // Privacy Actions with Custom Confirmation Modal
   const handleDeleteChatHistory = () => {
-    if (confirm("Are you sure you want to delete all your conversation history? This cannot be undone.")) {
-      localStorage.removeItem("sortmentor_conversations");
-      alert("Chat history deleted.");
-      window.location.reload();
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete All Chat History?",
+      message: "Are you sure you want to delete all your conversation history? This cannot be undone.",
+      confirmLabel: "Yes, Delete History",
+      cancelLabel: "Cancel",
+      onConfirm: () => {
+        localStorage.removeItem("sortmentor_conversations");
+        setSuccessMsg("Chat history deleted.");
+        setTimeout(() => setSuccessMsg(null), 3000);
+        setConfirmModal(null);
+      },
+    });
   };
 
   const handleExportData = () => {
@@ -157,23 +173,25 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (
-      confirm(
-        "WARNING: This will permanently delete your account and all associated data. This action is irreversible. Do you want to proceed?"
-      )
-    ) {
-      if (!user) return;
-      try {
-        // Delete documents
-        await deleteDoc(doc(db, "users", user.uid));
-        await deleteDoc(doc(db, "users_settings", user.uid));
-      } catch (e) {
-        console.warn("Delete document failed/offline");
-      }
-      localStorage.clear();
-      await logout();
-      router.push("/");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Permanently Delete Account?",
+      message: "WARNING: This will permanently delete your account and all associated data. This action is irreversible. Do you want to proceed?",
+      confirmLabel: "Permanently Delete",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        if (!user) return;
+        try {
+          await deleteDoc(doc(db, "users", user.uid));
+          await deleteDoc(doc(db, "users_settings", user.uid));
+        } catch (e) {
+          console.warn("Delete document failed/offline");
+        }
+        localStorage.clear();
+        await logout();
+        router.push("/");
+      },
+    });
   };
 
   if (authLoading || loading || !user) {
@@ -468,6 +486,42 @@ export default function SettingsPage() {
 
         </form>
       </main>
+
+      {/* Custom Destructive Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal?.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-slate-200"
+            >
+              <div className="flex items-center gap-2.5 text-rose-400">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <h4 className="font-bold text-sm text-white">{confirmModal.title}</h4>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">{confirmModal.message}</p>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-gray-300 transition-all cursor-pointer"
+                >
+                  {confirmModal.cancelLabel || "Cancel"}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmModal.onConfirm}
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition-all cursor-pointer shadow-lg shadow-rose-600/30"
+                >
+                  {confirmModal.confirmLabel || "Confirm"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

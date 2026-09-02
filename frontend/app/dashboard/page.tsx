@@ -7,7 +7,8 @@ import { useAuthStore } from "../../context/useAuthStore";
 import { 
   BrainCircuit, ArrowRight, Lock, SlidersHorizontal, Sparkles, 
   Code, ChevronRight, ArrowUpRight, CheckCircle2, HelpCircle, 
-  Info, Terminal, BookOpen, Loader2, Play, RotateCcw, Activity
+  Info, Terminal, BookOpen, Loader2, Play, RotateCcw, Activity,
+  ArrowUpDown, ArrowUp, ArrowDown, Layers, X
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
@@ -192,19 +193,105 @@ const ALGORITHMS: AlgorithmData[] = [
     inPlace: false,
     adaptive: true,
     description: "A hybrid sorting algorithm derived from Merge Sort and Insertion Sort, designed to perform well on real-world datasets.",
-    useCase: "Standard libraries of Python (list.sort) and Java (Arrays.sort)."
-  }
+    useCase: "Standard libraries of Python (list.sort) and Java (Arrays.sort)."}
 ];
 
-export default function Dashboard() {
+interface SandboxStep {
+  array: number[];
+  activeIndices: number[];
+  actionType: "compare" | "swap" | "pivot" | "sorted" | "insert";
+  message: string;
+}
+
+const generateSandboxSteps = (algoId: string, base: number[]): SandboxStep[] => {
+  const a = [...base];
+
+  switch (algoId) {
+    case "bubble":
+      return [
+        { array: [42, 12, 78, 23, 51], activeIndices: [0, 1], actionType: "compare", message: "Pass 1: Compare 42 & 12 (inversion detected)" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [0, 1], actionType: "swap", message: "Swapped 42 and 12 -> [12, 42, 78, 23, 51]" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [1, 2], actionType: "compare", message: "Compare 42 & 78 -> already in order" },
+        { array: [12, 42, 23, 78, 51], activeIndices: [2, 3], actionType: "swap", message: "Compare 78 & 23 -> swapped 78 & 23" },
+        { array: [12, 42, 23, 51, 78], activeIndices: [3, 4], actionType: "swap", message: "Compare 78 & 51 -> 78 settles at end index" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [1, 2], actionType: "swap", message: "Pass 2: Swapped 42 & 23 -> Array fully sorted!" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: "✓ Bubble Sort Complete: All elements in non-decreasing order." }
+      ];
+
+    case "selection":
+      return [
+        { array: [42, 12, 78, 23, 51], activeIndices: [1], actionType: "compare", message: "Scan unsorted part: Found minimum value 12 at index 1" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [0, 1], actionType: "swap", message: "Swapped min 12 into locked prefix index 0" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [3], actionType: "compare", message: "Scan [42, 78, 23, 51]: Found minimum value 23 at index 3" },
+        { array: [12, 23, 78, 42, 51], activeIndices: [1, 3], actionType: "swap", message: "Swapped 23 into prefix index 1" },
+        { array: [12, 23, 42, 78, 51], activeIndices: [2, 3], actionType: "swap", message: "Scan [78, 42, 51]: Swapped min 42 into index 2" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [3, 4], actionType: "swap", message: "Scan [78, 51]: Swapped 51 into index 3" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: "✓ Selection Sort Complete: All minimums positioned." }
+      ];
+
+    case "insertion":
+      return [
+        { array: [42, 12, 78, 23, 51], activeIndices: [1], actionType: "insert", message: "Extract key 12, shift 42 rightward" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [0], actionType: "swap", message: "Inserted 12 at sorted prefix head -> [12, 42]" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [2], actionType: "insert", message: "Extract key 78 > 42 -> already in place" },
+        { array: [12, 23, 42, 78, 51], activeIndices: [1, 2, 3], actionType: "swap", message: "Extract key 23, shifted 78 & 42 right -> inserted 23" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [3, 4], actionType: "swap", message: "Extract key 51, shifted 78 right -> inserted 51" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: "✓ Insertion Sort Complete: All keys positioned." }
+      ];
+
+    case "quick":
+      return [
+        { array: [42, 12, 78, 23, 51], activeIndices: [4], actionType: "pivot", message: "Selected pivot: 51. Partition into < 51 and ≥ 51" },
+        { array: [42, 12, 23, 78, 51], activeIndices: [2, 3], actionType: "swap", message: "Moved elements < 51 ([42, 12, 23]) to the left" },
+        { array: [42, 12, 23, 51, 78], activeIndices: [3, 4], actionType: "pivot", message: "Placed pivot 51 at boundary index 3" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2], actionType: "swap", message: "Conquered left partition [42, 12, 23] around pivot 23" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: "✓ Quick Sort Complete: Partitions sorted and combined." }
+      ];
+
+    case "merge":
+      return [
+        { array: [42, 12, 78, 23, 51], activeIndices: [0, 1, 2, 3, 4], actionType: "compare", message: "Divide into Left [42, 12] and Right [78, 23, 51]" },
+        { array: [12, 42, 78, 23, 51], activeIndices: [0, 1], actionType: "swap", message: "Conquer Left half: Merged into sorted [12, 42]" },
+        { array: [12, 42, 23, 51, 78], activeIndices: [2, 3, 4], actionType: "swap", message: "Conquer Right half: Merged into sorted [23, 51, 78]" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: "✓ Merge Sort Complete: 2-way merge into final sorted array." }
+      ];
+
+    case "heap":
+      return [
+        { array: [78, 51, 42, 23, 12], activeIndices: [0, 1, 2], actionType: "pivot", message: "Build Max-Heap: Root node is maximum element 78" },
+        { array: [51, 23, 42, 12, 78], activeIndices: [0, 4], actionType: "swap", message: "Extract root 78 to end boundary, sift down 51" },
+        { array: [42, 23, 12, 51, 78], activeIndices: [0, 3], actionType: "swap", message: "Extract root 51 to index 3, sift down 42" },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: "✓ Heap Sort Complete: Extracted all elements in order." }
+      ];
+
+    default:
+      return [
+        { array: [42, 12, 78, 23, 51], activeIndices: [0, 1, 2, 3, 4], actionType: "compare", message: `Tallying frequencies and distributing keys...` },
+        { array: [12, 23, 42, 51, 78], activeIndices: [0, 1, 2, 3, 4], actionType: "sorted", message: `✓ ${algoId.toUpperCase()} Sort Complete: Keys placed stably.` }
+      ];
+  }
+};
+
+export default function DashboardPage() {
   const { user, loading } = useAuthStore();
   const router = useRouter();
 
-  // Active Category Filter
-  const [filter, setFilter] = useState<string>("all");
+  // Active Category & Property Filters
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
 
-  // Interactive preview state
+  // Comparison Table Sorting
+  const [tableSortKey, setTableSortKey] = useState<keyof AlgorithmData>("name");
+  const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("asc");
+
+  // Locked modules feedback toast
+  const [lockedNotice, setLockedNotice] = useState<string | null>(null);
+
+  // Interactive sandbox state
   const [previewArray, setPreviewArray] = useState<number[]>([42, 12, 78, 23, 51]);
+  const [previewActiveIndices, setPreviewActiveIndices] = useState<number[]>([]);
+  const [previewActionType, setPreviewActionType] = useState<"compare" | "swap" | "pivot" | "sorted" | "insert">("compare");
+  const [previewMessage, setPreviewMessage] = useState<string>("Click 'Run Sandbox Sort' to watch real algorithmic step transitions.");
   const [previewAlgorithm, setPreviewAlgorithm] = useState<string>("quick");
   const [isPreviewSorting, setIsPreviewSorting] = useState<boolean>(false);
   const [isPreviewSorted, setIsPreviewSorted] = useState<boolean>(false);
@@ -215,40 +302,93 @@ export default function Dashboard() {
     }
   }, [user, loading, router]);
 
-  // Client-side filtering of algorithms
+  // Client-side filtering of algorithms with clean taxonomy
   const filteredAlgos = useMemo(() => {
     return ALGORITHMS.filter(algo => {
-      if (filter === "all") return true;
-      if (filter === "comparison") return algo.category === "Comparison Based" || algo.category === "Divide & Conquer";
-      if (filter === "non-comparison") return algo.category === "Non-Comparison Based";
-      if (filter === "stable") return algo.stable;
-      if (filter === "adaptive") return algo.adaptive;
-      if (filter === "divide-conquer") return algo.category === "Divide & Conquer";
+      // Category filter check
+      if (categoryFilter === "comparison" && algo.category !== "Comparison Based" && algo.category !== "Divide & Conquer") return false;
+      if (categoryFilter === "divide-conquer" && algo.category !== "Divide & Conquer") return false;
+      if (categoryFilter === "non-comparison" && algo.category !== "Non-Comparison Based") return false;
+
+      // Property filter check
+      if (propertyFilter === "stable" && !algo.stable) return false;
+      if (propertyFilter === "inplace" && !algo.inPlace) return false;
+      if (propertyFilter === "adaptive" && !algo.adaptive) return false;
+
       return true;
     });
-  }, [filter]);
+  }, [categoryFilter, propertyFilter]);
 
-  // Simulated preview sorting
+  // Sorted algorithms for comparison table
+  const sortedTableAlgos = useMemo(() => {
+    const list = [...ALGORITHMS];
+    list.sort((a, b) => {
+      const valA = a[tableSortKey];
+      const valB = b[tableSortKey];
+
+      if (typeof valA === "boolean") {
+        const numA = valA ? 1 : 0;
+        const numB = valB ? 1 : 0;
+        return tableSortDir === "asc" ? numA - numB : numB - numA;
+      }
+
+      if (typeof valA === "string" && typeof valB === "string") {
+        return tableSortDir === "asc" 
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      }
+
+      return 0;
+    });
+    return list;
+  }, [tableSortKey, tableSortDir]);
+
+  const handleTableSort = (key: keyof AlgorithmData) => {
+    if (tableSortKey === key) {
+      setTableSortDir(tableSortDir === "asc" ? "desc" : "asc");
+    } else {
+      setTableSortKey(key);
+      setTableSortDir("asc");
+    }
+  };
+
+  const showLockedFeedback = (domainName: string) => {
+    setLockedNotice(`${domainName} module is currently in development — coming in our upcoming release!`);
+    setTimeout(() => {
+      setLockedNotice(null);
+    }, 3500);
+  };
+
+  // Algorithm-specific sandbox sorting execution
   const runPreviewSort = () => {
     if (isPreviewSorting) return;
     setIsPreviewSorting(true);
-    let step = 0;
+    setIsPreviewSorted(false);
+
+    const steps = generateSandboxSteps(previewAlgorithm, [42, 12, 78, 23, 51]);
+    let currentIdx = 0;
+
     const interval = setInterval(() => {
-      step++;
-      if (step === 1) setPreviewArray([12, 42, 78, 23, 51]);
-      else if (step === 2) setPreviewArray([12, 23, 78, 42, 51]);
-      else if (step === 3) setPreviewArray([12, 23, 42, 78, 51]);
-      else if (step === 4) {
-        setPreviewArray([12, 23, 42, 51, 78]);
+      if (currentIdx < steps.length) {
+        const s = steps[currentIdx];
+        setPreviewArray(s.array);
+        setPreviewActiveIndices(s.activeIndices);
+        setPreviewActionType(s.actionType);
+        setPreviewMessage(s.message);
+        currentIdx++;
+      } else {
+        clearInterval(interval);
         setIsPreviewSorting(false);
         setIsPreviewSorted(true);
-        clearInterval(interval);
       }
-    }, 450);
+    }, 600);
   };
 
   const resetPreview = () => {
     setPreviewArray([42, 12, 78, 23, 51]);
+    setPreviewActiveIndices([]);
+    setPreviewActionType("compare");
+    setPreviewMessage("Select an algorithm and click 'Run Sandbox Sort'.");
     setIsPreviewSorted(false);
     setIsPreviewSorting(false);
   };
@@ -284,20 +424,44 @@ export default function Dashboard() {
             </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
+          <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
             <span className="text-white border-b-2 border-indigo-500 pb-1 cursor-default">Sorting</span>
-            <span className="text-gray-500 flex items-center gap-1.5 cursor-not-allowed group relative" title="Searching (Coming Soon)">
-              Searching <Lock className="h-3 w-3 text-gray-600" />
-            </span>
-            <span className="text-gray-500 flex items-center gap-1.5 cursor-not-allowed" title="Trees (Coming Soon)">
-              Trees <Lock className="h-3 w-3 text-gray-600" />
-            </span>
-            <span className="text-gray-500 flex items-center gap-1.5 cursor-not-allowed" title="Graphs (Coming Soon)">
-              Graphs <Lock className="h-3 w-3 text-gray-600" />
-            </span>
-            <span className="text-gray-500 flex items-center gap-1.5 cursor-not-allowed" title="DP (Coming Soon)">
-              DP <Lock className="h-3 w-3 text-gray-600" />
-            </span>
+            <button
+              onClick={() => showLockedFeedback("Searching")}
+              className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>Searching</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-gray-400 font-mono flex items-center gap-1">
+                <Lock className="h-2.5 w-2.5 text-gray-500" /> Soon
+              </span>
+            </button>
+            <button
+              onClick={() => showLockedFeedback("Trees")}
+              className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>Trees</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-gray-400 font-mono flex items-center gap-1">
+                <Lock className="h-2.5 w-2.5 text-gray-500" /> Soon
+              </span>
+            </button>
+            <button
+              onClick={() => showLockedFeedback("Graphs")}
+              className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>Graphs</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-gray-400 font-mono flex items-center gap-1">
+                <Lock className="h-2.5 w-2.5 text-gray-500" /> Soon
+              </span>
+            </button>
+            <button
+              onClick={() => showLockedFeedback("Dynamic Programming")}
+              className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>DP</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-gray-400 font-mono flex items-center gap-1">
+                <Lock className="h-2.5 w-2.5 text-gray-500" /> Soon
+              </span>
+            </button>
           </nav>
         </div>
 
@@ -325,14 +489,14 @@ export default function Dashboard() {
                 onClick={() => document.getElementById("library")?.scrollIntoView({ behavior: "smooth" })}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold text-sm transition-all text-white shadow-md shadow-indigo-600/10 cursor-pointer"
               >
-                Explore Algorithms
+                Explore Sorting Library ↓
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button 
                 onClick={() => router.push("/sortmentor")}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-white/10 hover:border-white/20 font-semibold text-sm transition-all text-white cursor-pointer"
               >
-                Open Visualizer
+                Launch SortMentor Workspace →
                 <ArrowUpRight className="h-4 w-4" />
               </button>
             </div>
@@ -350,12 +514,35 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Locked Feature Toast Notice */}
+        <AnimatePresence>
+          {lockedNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-3 rounded-xl bg-slate-900/90 border border-indigo-500/30 text-indigo-200 text-xs font-mono flex items-center justify-between shadow-xl"
+            >
+              <div className="flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5 text-indigo-400" />
+                <span>{lockedNotice}</span>
+              </div>
+              <button
+                onClick={() => setLockedNotice(null)}
+                className="p-1 text-gray-400 hover:text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* 2. DOMAIN SECTION INTRO */}
         <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-4 border-b border-white/5">
           <div className="flex flex-col gap-2">
             <h2 className="text-2xl font-bold text-white tracking-tight">Sorting Algorithms Overview</h2>
             <p className="text-sm text-gray-400 max-w-2xl">
-              Explore, compare, and visualize how sorting algorithms transform data step by step. Learn the theory, compare complexities, and open the SortMentor interactive workspace.
+              Explore, compare, and visualize how sorting algorithms transform data step by step. Learn the theory, compare complexities, and launch the SortMentor interactive workspace.
             </p>
           </div>
           <div className="flex gap-3">
@@ -363,134 +550,153 @@ export default function Dashboard() {
               onClick={() => document.getElementById("library")?.scrollIntoView({ behavior: "smooth" })}
               className="px-4 py-2 text-xs font-bold text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 rounded-lg cursor-pointer"
             >
-              Explore Sorting Algorithms →
+              Browse Library ↓
             </button>
             <button 
               onClick={() => router.push("/sortmentor")}
               className="px-4 py-2 text-xs font-bold text-pink-400 bg-pink-500/5 hover:bg-pink-500/10 border border-pink-500/20 rounded-lg cursor-pointer"
             >
-              Open SortMentor →
+              Launch SortMentor Workspace →
             </button>
           </div>
         </section>
 
-        {/* 3. ALGORITHM LIBRARY & FILTERS */}
+        {/* 3. ALGORITHM LIBRARY & TAXONOMY FILTERS */}
         <section id="library" className="flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5 text-indigo-400" />
-              <h3 className="text-xl font-bold text-white">Sorting Algorithm Library</h3>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5 text-indigo-400" />
+                <h3 className="text-xl font-bold text-white">Sorting Algorithm Library</h3>
+              </div>
+              <span className="text-xs font-mono text-gray-400">
+                Showing <b className="text-white">{filteredAlgos.length}</b> of {ALGORITHMS.length} Algorithms
+              </span>
             </div>
             
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2 bg-slate-950/60 p-1 rounded-xl border border-white/5">
-              {[
-                { id: "all", label: "All" },
-                { id: "comparison", label: "Comparison" },
-                { id: "non-comparison", label: "Non-Comparison" },
-                { id: "divide-conquer", label: "Divide & Conquer" },
-                { id: "stable", label: "Stable" },
-                { id: "adaptive", label: "Adaptive" }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => setFilter(opt.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                    filter === opt.id 
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" 
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            {/* Structured Dual-Tier Taxonomy Filter */}
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3 bg-slate-950/60 p-2.5 rounded-2xl border border-white/5">
+              {/* Category Filters */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold text-gray-500 uppercase px-1">Category:</span>
+                {[
+                  { id: "all", label: "All Categories" },
+                  { id: "comparison", label: "Comparison-Based" },
+                  { id: "divide-conquer", label: "Divide & Conquer" },
+                  { id: "non-comparison", label: "Non-Comparison" }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setCategoryFilter(opt.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                      categoryFilter === opt.id 
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" 
+                        : "text-gray-400 hover:text-white bg-slate-900/40 border border-white/5"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Property Filters */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold text-gray-500 uppercase px-1">Properties:</span>
+                {[
+                  { id: "all", label: "All" },
+                  { id: "stable", label: "Stable Only" },
+                  { id: "inplace", label: "In-Place O(1)" },
+                  { id: "adaptive", label: "Adaptive" }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setPropertyFilter(opt.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                      propertyFilter === opt.id 
+                        ? "bg-pink-600 text-white shadow-md shadow-pink-600/20" 
+                        : "text-gray-400 hover:text-white bg-slate-900/40 border border-white/5"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Algorithm Grid */}
-          <motion.div 
-            layout 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredAlgos.map(algo => (
-                <motion.div
-                  key={algo.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="glass-card p-6 flex flex-col gap-4 justify-between border border-white/5 bg-slate-900/35 relative overflow-hidden group"
-                >
-                  {/* Category Accent */}
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-500/20 group-hover:bg-indigo-500/50 transition-colors"></div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-start">
-                      <h4 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{algo.name}</h4>
-                      <div className="flex gap-1.5">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                          algo.difficulty === "Easy" ? "bg-emerald-500/10 text-emerald-400" :
-                          algo.difficulty === "Intermediate" ? "bg-amber-500/10 text-amber-400" :
-                          "bg-rose-500/10 text-rose-400"
-                        }`}>
-                          {algo.difficulty}
-                        </span>
-                        <span className="text-[9px] font-bold bg-white/5 text-gray-400 px-1.5 py-0.5 rounded">
-                          {algo.stable ? "Stable" : "Unstable"}
-                        </span>
-                      </div>
+          {/* Algorithm Grid with Uniform Card Heights and Differentiated Direct Linking */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAlgos.map(algo => (
+              <div
+                key={algo.id}
+                className="glass-card p-6 flex flex-col justify-between h-full border border-white/5 bg-slate-900/35 relative overflow-hidden group rounded-2xl"
+              >
+                {/* Category Accent */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-500/20 group-hover:bg-indigo-500/50 transition-colors"></div>
+                
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{algo.name}</h4>
+                    <div className="flex gap-1.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                        algo.difficulty === "Easy" ? "bg-emerald-500/10 text-emerald-400" :
+                        algo.difficulty === "Intermediate" ? "bg-amber-500/10 text-amber-400" :
+                        "bg-rose-500/10 text-rose-400"
+                      }`}>
+                        {algo.difficulty}
+                      </span>
+                      <span className="text-[9px] font-bold bg-white/5 text-gray-400 px-1.5 py-0.5 rounded">
+                        {algo.stable ? "Stable" : "Unstable"}
+                      </span>
                     </div>
-                    <p className="text-xs text-gray-400 leading-relaxed min-h-[36px]">{algo.description}</p>
                   </div>
+                  <p className="text-xs text-gray-400 leading-relaxed min-h-[42px] line-clamp-2">{algo.description}</p>
+                </div>
 
-                  <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div>
-                        <span className="text-gray-500 block">Average Time:</span>
-                        <code className="font-mono text-indigo-300">{algo.avgCase}</code>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block">Worst Time:</span>
-                        <code className="font-mono text-indigo-300">{algo.worstCase}</code>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block">Space Complexity:</span>
-                        <code className="font-mono text-pink-300">{algo.spaceComplexity}</code>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block">In-Place:</span>
-                        <span className="font-semibold text-gray-300">{algo.inPlace ? "Yes" : "No"}</span>
-                      </div>
+                <div className="flex flex-col gap-2 border-t border-white/5 pt-3 my-2">
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-gray-500 block">Average Time:</span>
+                      <code className="font-mono text-indigo-300">{algo.avgCase}</code>
                     </div>
-                    <div className="text-[11px] mt-1 border-t border-white/5 pt-2">
-                      <span className="text-gray-500 block font-semibold">Typical Use Case:</span>
-                      <p className="text-gray-400 text-xs italic">{algo.useCase}</p>
+                    <div>
+                      <span className="text-gray-500 block">Worst Time:</span>
+                      <code className="font-mono text-indigo-300">{algo.worstCase}</code>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Space Complexity:</span>
+                      <code className="font-mono text-pink-300">{algo.spaceComplexity}</code>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">In-Place:</span>
+                      <span className="font-semibold text-gray-300">{algo.inPlace ? "Yes" : "No"}</span>
                     </div>
                   </div>
+                  <div className="text-[11px] mt-1 border-t border-white/5 pt-2">
+                    <span className="text-gray-500 block font-semibold">Typical Use Case:</span>
+                    <p className="text-gray-400 text-xs italic min-h-[36px] line-clamp-2">{algo.useCase}</p>
+                  </div>
+                </div>
 
-                  <div className="flex gap-3 mt-2 border-t border-white/5 pt-3">
-                    <button 
-                      onClick={() => {
-                        const target = document.getElementById("fundamentals");
-                        if (target) target.scrollIntoView({ behavior: "smooth" });
-                      }}
-                      className="flex-1 px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 text-xs font-semibold text-center text-gray-300 hover:text-white transition-all cursor-pointer"
-                    >
-                      Learn Theory
-                    </button>
-                    <button 
-                      onClick={() => navigateToVisualizer(algo.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-600 text-xs font-bold text-white transition-all cursor-pointer shadow-sm shadow-indigo-600/10"
-                    >
-                      Visualize →
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+                <div className="flex gap-3 mt-auto border-t border-white/5 pt-3">
+                  <button 
+                    onClick={() => router.push(`/sortmentor?algorithm=${algo.id}&mode=intro`)}
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-white/10 hover:border-indigo-500/30 text-xs font-semibold text-center text-gray-300 hover:text-white bg-slate-900/60 transition-all cursor-pointer"
+                    title={`Open 3-Step Guided Theory for ${algo.name}`}
+                  >
+                    3-Step Theory
+                  </button>
+                  <button 
+                    onClick={() => navigateToVisualizer(algo.id)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-600 text-xs font-bold text-white transition-all cursor-pointer shadow-sm shadow-indigo-600/10"
+                    title={`Launch Visualizer for ${algo.name}`}
+                  >
+                    Visualize →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* 4. ALGORITHM SPOTLIGHT */}
@@ -577,38 +783,92 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* 6. ALGORITHM COMPARISON TABLE */}
+        {/* 6. ALGORITHM COMPARISON TABLE (INTERACTIVE CLICK-TO-SORT) */}
         <section className="flex flex-col gap-6">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-xl font-bold text-white">Compare Sorting Algorithms</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5 text-indigo-400" />
+              <h3 className="text-xl font-bold text-white">Compare Sorting Algorithms</h3>
+            </div>
+            <span className="text-[11px] font-mono text-gray-400">Click column headers to sort</span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/40">
-            <table className="w-full text-left text-xs text-gray-400 min-w-[700px]">
+          <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/40 shadow-inner">
+            <table className="w-full text-left text-xs text-gray-400 min-w-[750px]">
               <thead className="bg-slate-900 text-white font-mono uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="p-4">Algorithm</th>
-                  <th className="p-4">Best Case</th>
-                  <th className="p-4">Average Case</th>
-                  <th className="p-4">Worst Case</th>
-                  <th className="p-4">Space Complexity</th>
-                  <th className="p-4">Stable</th>
-                  <th className="p-4">In-Place</th>
-                  <th className="p-4">Adaptive</th>
+                  {[
+                    { key: "name", label: "Algorithm" },
+                    { key: "bestCase", label: "Best Case" },
+                    { key: "avgCase", label: "Average Case" },
+                    { key: "worstCase", label: "Worst Case" },
+                    { key: "spaceComplexity", label: "Space Aux" },
+                    { key: "stable", label: "Stable" },
+                    { key: "inPlace", label: "In-Place" },
+                    { key: "adaptive", label: "Adaptive" },
+                    { key: "difficulty", label: "Difficulty" },
+                  ].map(col => (
+                    <th 
+                      key={col.key}
+                      onClick={() => handleTableSort(col.key as keyof AlgorithmData)}
+                      className="p-3.5 cursor-pointer hover:bg-white/10 transition-colors select-none group"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>{col.label}</span>
+                        {tableSortKey === col.key ? (
+                          tableSortDir === "asc" ? (
+                            <ArrowUp className="h-3 w-3 text-indigo-400" />
+                          ) : (
+                            <ArrowDown className="h-3 w-3 text-indigo-400" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-2.5 w-2.5 text-gray-600 group-hover:text-gray-400" />
+                        )}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {ALGORITHMS.map(algo => (
-                  <tr key={algo.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-bold text-white font-mono">{algo.name}</td>
-                    <td className="p-4 font-mono text-indigo-300">{algo.bestCase}</td>
-                    <td className="p-4 font-mono text-indigo-300">{algo.avgCase}</td>
-                    <td className="p-4 font-mono text-indigo-300">{algo.worstCase}</td>
-                    <td className="p-4 font-mono text-pink-300">{algo.spaceComplexity}</td>
-                    <td className="p-4 font-semibold">{algo.stable ? "Yes" : "No"}</td>
-                    <td className="p-4 font-semibold">{algo.inPlace ? "Yes" : "No"}</td>
-                    <td className="p-4 font-semibold">{algo.adaptive ? "Yes" : "No"}</td>
+                {sortedTableAlgos.map(algo => (
+                  <tr 
+                    key={algo.id} 
+                    onClick={() => navigateToVisualizer(algo.id)}
+                    className="hover:bg-indigo-500/5 transition-colors cursor-pointer"
+                    title={`Click to open ${algo.name} in SortMentor`}
+                  >
+                    <td className="p-3.5 font-bold text-white font-mono flex items-center gap-1.5">
+                      <span>{algo.name}</span>
+                      <ArrowUpRight className="h-3 w-3 text-gray-600 opacity-0 group-hover:opacity-100" />
+                    </td>
+                    <td className="p-3.5 font-mono text-emerald-300">{algo.bestCase}</td>
+                    <td className="p-3.5 font-mono text-indigo-300">{algo.avgCase}</td>
+                    <td className="p-3.5 font-mono text-rose-300">{algo.worstCase}</td>
+                    <td className="p-3.5 font-mono text-pink-300">{algo.spaceComplexity}</td>
+                    <td className="p-3.5 font-semibold">
+                      <span className={algo.stable ? "text-emerald-400" : "text-gray-500"}>
+                        {algo.stable ? "✓ Yes" : "✗ No"}
+                      </span>
+                    </td>
+                    <td className="p-3.5 font-semibold">
+                      <span className={algo.inPlace ? "text-emerald-400" : "text-gray-500"}>
+                        {algo.inPlace ? "✓ Yes" : "✗ No"}
+                      </span>
+                    </td>
+                    <td className="p-3.5 font-semibold">
+                      <span className={algo.adaptive ? "text-emerald-400" : "text-gray-500"}>
+                        {algo.adaptive ? "✓ Yes" : "✗ No"}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                        algo.difficulty === "Easy" ? "bg-emerald-500/10 text-emerald-400" :
+                        algo.difficulty === "Intermediate" ? "bg-amber-500/10 text-amber-400" :
+                        "bg-rose-500/10 text-rose-400"
+                      }`}>
+                        {algo.difficulty}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -643,14 +903,14 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* 8. INTERACTIVE SORTING PREVIEW */}
+        {/* 8. GENUINE INTERACTIVE SORTING PREVIEW */}
         <section className="glass-panel p-6 rounded-2xl border border-white/5 bg-slate-950/40 flex flex-col lg:flex-row gap-8 justify-between items-stretch">
           <div className="flex-1 flex flex-col gap-4 justify-between">
             <div className="flex flex-col gap-2">
               <span className="text-xs uppercase font-mono tracking-widest text-indigo-400 font-bold">Interactive Sandbox Preview</span>
-              <h3 className="text-xl font-bold text-white">Visual Array Preview</h3>
+              <h3 className="text-xl font-bold text-white">Live Algorithmic Step-Through</h3>
               <p className="text-sm text-gray-400 leading-relaxed max-w-lg">
-                Choose an algorithm to simulate sorting of the unsorted array in real-time. To explore steps, details, and comparisons in full depth, open the SortMentor interactive workspace.
+                Select an algorithm to watch its distinct sorting subroutine in action. Each algorithm demonstrates its actual comparisons, pivot selection, or minimum element swaps.
               </p>
             </div>
 
@@ -659,12 +919,18 @@ export default function Dashboard() {
                 <span className="text-xs text-gray-500 font-mono">Algorithm:</span>
                 <select 
                   value={previewAlgorithm} 
-                  onChange={(e) => setPreviewAlgorithm(e.target.value)}
+                  onChange={(e) => {
+                    setPreviewAlgorithm(e.target.value);
+                    resetPreview();
+                  }}
                   className="bg-slate-900 border border-white/10 rounded px-2.5 py-1 text-xs text-white focus:outline-none"
                 >
-                  <option value="quick">Quick Sort</option>
-                  <option value="bubble">Bubble Sort</option>
-                  <option value="merge">Merge Sort</option>
+                  <option value="quick">Quick Sort (Pivot Partition)</option>
+                  <option value="bubble">Bubble Sort (Adjacent Swaps)</option>
+                  <option value="selection">Selection Sort (Min Extraction)</option>
+                  <option value="insertion">Insertion Sort (Prefix Shifts)</option>
+                  <option value="merge">Merge Sort (Divide & Conquer)</option>
+                  <option value="heap">Heap Sort (Binary Max-Heap)</option>
                 </select>
               </div>
 
@@ -675,7 +941,7 @@ export default function Dashboard() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold text-white transition-all cursor-pointer"
                 >
                   <Play className="h-3 w-3" />
-                  Sort
+                  Run Sandbox Sort
                 </button>
                 <button
                   onClick={resetPreview}
@@ -687,12 +953,18 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5">
+            {/* Live Step Explanation in Sandbox */}
+            <div className="mt-2 p-3 rounded-lg bg-slate-900/60 border border-white/5 text-xs font-mono text-indigo-200">
+              <span className="text-[10px] text-gray-500 uppercase block font-bold">Sandbox Event:</span>
+              <p className="mt-0.5">{previewMessage}</p>
+            </div>
+
+            <div className="mt-2 pt-3 border-t border-white/5">
               <button
                 onClick={() => router.push(`/sortmentor?algorithm=${previewAlgorithm}`)}
                 className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-bold text-xs transition-all cursor-pointer"
               >
-                Open Interactive Workspace in SortMentor
+                Launch Full Simulation in SortMentor Workspace →
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -710,18 +982,33 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <div className="flex justify-center items-end gap-3 h-24 mt-2">
-              {previewArray.map((val, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-2 flex-1">
-                  <div 
-                    className="w-full rounded-t-md transition-all duration-300 bg-indigo-600/90 relative"
-                    style={{ height: `${val * 1.2}px` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10 rounded-t-md"></div>
+            <div className="flex justify-center items-end gap-3 h-28 mt-2">
+              {previewArray.map((val, idx) => {
+                const isActive = previewActiveIndices.includes(idx);
+                let barColor = "bg-indigo-600/90";
+                if (isActive) {
+                  if (previewActionType === "swap") barColor = "bg-rose-500";
+                  else if (previewActionType === "pivot") barColor = "bg-cyan-400";
+                  else if (previewActionType === "sorted") barColor = "bg-emerald-500";
+                  else barColor = "bg-amber-400";
+                } else if (isPreviewSorted) {
+                  barColor = "bg-emerald-500/80";
+                }
+
+                return (
+                  <div key={idx} className="flex flex-col items-center gap-2 flex-1">
+                    <div 
+                      className={`w-full rounded-t-md transition-all duration-300 ${barColor} relative`}
+                      style={{ height: `${val * 1.2}px` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10 rounded-t-md"></div>
+                    </div>
+                    <span className={`font-mono text-[10px] font-bold ${isActive ? "text-white" : "text-gray-500"}`}>
+                      {val}
+                    </span>
                   </div>
-                  <span className="font-mono text-[10px] text-gray-500 font-bold">{val}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

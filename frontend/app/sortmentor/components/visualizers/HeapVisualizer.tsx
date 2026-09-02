@@ -66,23 +66,27 @@ export default function HeapVisualizer({
 
   return (
     <div 
-      className="w-full h-full flex flex-col justify-between min-h-0 gap-4"
-      style={{ transform: `scale(${zoom})`, transformOrigin: "bottom center" }}
+      className="w-full h-full flex flex-col justify-between p-1.5 sm:p-3 gap-2 sm:gap-3 min-h-0 select-none overflow-hidden"
+      style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
     >
       {/* 1. Binary Tree Layout */}
-      <div className="flex-1 min-h-0 w-full relative p-2 overflow-y-auto flex items-center justify-center">
-        <svg className="w-full h-full min-h-[220px]" style={{ maxHeight: `${svgHeight}px`, maxWidth: "560px" }}>
+      <div className="flex-1 min-h-[160px] w-full relative p-2 overflow-y-auto flex items-center justify-center bg-slate-950/40 rounded-xl border border-white/5 shadow-inner">
+        <svg 
+          className="w-full h-full max-h-[360px]" 
+          viewBox={`0 0 600 ${svgHeight}`}
+          preserveAspectRatio="xMidYMid meet"
+        >
           
           {/* Draw Connection Edges */}
           {edges.map((edge) => (
             <line
               key={edge.id}
-              x1={`${edge.parent.x}%`}
+              x1={(edge.parent.x / 100) * 600}
               y1={edge.parent.y}
-              x2={`${edge.child.x}%`}
+              x2={(edge.child.x / 100) * 600}
               y2={edge.child.y}
-              stroke={edge.isActiveHeap ? "rgba(99, 102, 241, 0.4)" : "rgba(255, 255, 255, 0.05)"}
-              strokeWidth={edge.isActiveHeap ? "2" : "1"}
+              stroke={edge.isActiveHeap ? "rgba(99, 102, 241, 0.6)" : "rgba(255, 255, 255, 0.08)"}
+              strokeWidth={edge.isActiveHeap ? "2.5" : "1.5"}
             />
           ))}
 
@@ -92,6 +96,7 @@ export default function HeapVisualizer({
             const isSwapped = activeStep?.swap?.includes(node.index);
             const isRoot = node.index === 0;
             const inSortedPart = node.index >= heapSize;
+            const cx = (node.x / 100) * 600;
 
             let circleFill = "bg-slate-950 border-slate-700 text-gray-400";
             if (isSwapped) circleFill = "bg-rose-500 border-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.6)]";
@@ -102,7 +107,7 @@ export default function HeapVisualizer({
             return (
               <g key={node.index}>
                 <foreignObject
-                  x={`calc(${node.x}% - 16px)`}
+                  x={cx - 16}
                   y={node.y - 16}
                   width="32"
                   height="32"
@@ -114,7 +119,7 @@ export default function HeapVisualizer({
                   </div>
                 </foreignObject>
                 <text
-                  x={`${node.x}%`}
+                  x={cx}
                   y={node.y + 26}
                   textAnchor="middle"
                   className="fill-gray-400 text-[8px] font-mono font-semibold"
@@ -128,9 +133,11 @@ export default function HeapVisualizer({
       </div>
 
       {/* 2. Synchronized Array Representation */}
-      <div className="shrink-0 flex flex-col gap-1.5 p-3.5 bg-slate-950/60 rounded-xl border border-white/5 mx-2 shadow-inner">
-        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-semibold">Underlying Array:</span>
-        <div className="flex gap-1.5 justify-between select-none">
+      <div className="shrink-0 flex flex-col gap-1 p-2 sm:p-2.5 bg-slate-950/60 rounded-xl border border-white/5 shadow-inner">
+        <span className="text-[9px] sm:text-[10px] font-mono text-gray-400 uppercase tracking-wider block font-semibold">
+          Underlying Array (Heap Size: {heapSize}/{array.length}):
+        </span>
+        <div className="flex gap-1 sm:gap-1.5 justify-between select-none overflow-x-auto pb-0.5">
           {array.map((val, idx) => {
             const isCompared = activeStep?.compare?.includes(idx);
             const isSwapped = activeStep?.swap?.includes(idx);
@@ -144,9 +151,10 @@ export default function HeapVisualizer({
             return (
               <div
                 key={idx}
-                className={`flex-1 py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${cellClass}`}
+                className={`flex-1 min-w-[26px] sm:min-w-[34px] py-1.5 sm:py-2 rounded-lg border text-center font-mono text-[10px] sm:text-xs font-black transition-all ${cellClass}`}
               >
-                {val}
+                <span className="block leading-tight">{val}</span>
+                <span className="block text-[7px] text-gray-500 font-semibold leading-none mt-0.5">[{idx}]</span>
               </div>
             );
           })}

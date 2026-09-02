@@ -58,33 +58,40 @@ export default function RadixVisualizer({
 
   return (
     <div 
-      className="w-full h-full flex flex-col justify-between p-2 gap-4 min-h-0 overflow-y-auto"
+      className="w-full h-full flex flex-col justify-between p-1.5 sm:p-3 gap-2 sm:gap-3 min-h-0 overflow-y-auto select-none"
       style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
     >
       
       {/* Exponent / Position banner */}
-      <div className="shrink-0 flex justify-between items-center text-xs font-mono bg-slate-950/60 border border-white/5 p-3 rounded-xl shadow-inner">
-        <span className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">Current Digit Position:</span>
-        <span className="text-pink-400 font-extrabold text-xs">Base {exp} ({exp === 1 ? "Ones Place" : exp === 10 ? "Tens Place" : exp === 100 ? "Hundreds Place" : "Higher"})</span>
+      <div className="shrink-0 flex justify-between items-center text-xs font-mono bg-slate-950/60 border border-white/5 p-2 sm:p-2.5 rounded-xl shadow-inner">
+        <span className="text-gray-400 font-bold uppercase text-[9px] sm:text-[10px] tracking-wider flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+          Current Digit Position:
+        </span>
+        <span className="text-pink-400 font-extrabold text-xs">
+          Base {exp} ({exp === 1 ? "1s Place" : exp === 10 ? "10s Place" : exp === 100 ? "100s Place" : "Higher"})
+        </span>
       </div>
 
       {/* Main Array Display */}
-      <div className="flex flex-col gap-1.5 shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
-        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block font-bold">Array:</span>
-        <div className="flex gap-1.5 justify-between select-none overflow-x-auto pb-1">
+      <div className="flex flex-col gap-1 shrink-0 bg-slate-950/60 p-2 sm:p-2.5 rounded-xl border border-white/5 shadow-inner">
+        <span className="text-[9px] sm:text-[10px] font-mono text-gray-400 uppercase tracking-wider block font-bold">
+          Active Array ({array.length} items):
+        </span>
+        <div className="flex gap-1 sm:gap-1.5 justify-between select-none overflow-x-auto pb-0.5">
           {array.map((val, idx) => {
             const isWriting = writeBackIdx === idx;
             return (
               <div
                 key={idx}
-                className={`flex-1 min-w-[32px] py-2 rounded-lg border text-center font-mono text-xs font-extrabold transition-all ${
+                className={`flex-1 min-w-[26px] sm:min-w-[34px] py-1 sm:py-1.5 rounded-lg border text-center font-mono text-[10px] sm:text-xs font-black transition-all ${
                   isWriting
-                    ? "bg-rose-500/30 border-rose-500 text-rose-200 shadow-md shadow-rose-500/30 animate-pulse"
+                    ? "bg-rose-500/30 border-rose-500 text-rose-200 shadow-md shadow-rose-500/30 animate-pulse scale-105 z-10"
                     : "bg-slate-900 border-white/10 text-gray-200"
                 }`}
               >
-                {val}
-                <span className="block text-[7px] text-gray-500 font-semibold mt-0.5">[{idx}]</span>
+                <span className="block leading-tight">{val}</span>
+                <span className="block text-[7px] text-gray-500 font-semibold leading-none mt-0.5">[{idx}]</span>
               </div>
             );
           })}
@@ -92,10 +99,17 @@ export default function RadixVisualizer({
       </div>
 
       {/* Digit Buckets */}
-      <div className="flex flex-col gap-2 min-h-0 flex-1">
-        <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block shrink-0 font-bold">Digit Buckets (0-9):</span>
+      <div className="flex flex-col gap-1 min-h-[140px] flex-1 bg-slate-950/40 p-2 sm:p-2.5 rounded-xl border border-white/5 shadow-inner overflow-hidden">
+        <div className="flex items-center justify-between shrink-0">
+          <span className="text-[9px] sm:text-[10px] font-mono text-gray-400 uppercase tracking-wider font-bold">
+            Digit Buckets (0-9):
+          </span>
+          <span className="text-[9px] font-mono text-slate-400">
+            {writeBackVal !== null ? `Writing back ${writeBackVal}` : "Distributing by current radix digit"}
+          </span>
+        </div>
         
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 flex-1 min-h-0 overflow-y-auto">
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 sm:gap-1.5 flex-1 min-h-0 pt-1 overflow-y-auto">
           {buckets.map((bucketValues, bucketDigit) => {
             // Check if this bucket is actively releasing the current writeBackVal
             const isReleasing = writeBackVal !== null && Math.floor(writeBackVal / exp) % 10 === bucketDigit;
@@ -103,26 +117,28 @@ export default function RadixVisualizer({
             return (
               <div
                 key={bucketDigit}
-                className={`rounded-xl border p-2 flex flex-col items-center gap-2 min-h-[100px] transition-all bg-slate-950/60 ${
+                className={`rounded-xl border p-1 sm:p-1.5 flex flex-col items-center gap-1 min-h-[90px] transition-all bg-slate-950/70 ${
                   isReleasing
-                    ? "border-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.2)]"
-                    : "border-white/5"
+                    ? "border-amber-400/80 shadow-[0_0_15px_rgba(251,191,36,0.3)] bg-amber-500/10 ring-1 ring-amber-400/40"
+                    : "border-white/10"
                 }`}
               >
                 {/* Bucket Header */}
-                <div className="w-6 h-6 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center font-mono text-xs font-extrabold text-indigo-300">
+                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center font-mono text-[10px] sm:text-xs font-black shrink-0 ${
+                  isReleasing ? "bg-amber-400 text-slate-950 border-amber-300" : "bg-slate-900 border-white/10 text-indigo-300"
+                }`}>
                   {bucketDigit}
                 </div>
 
                 {/* Bucket Elements stack */}
-                <div className="flex flex-col-reverse gap-1.5 w-full flex-1 justify-start overflow-y-auto">
+                <div className="flex flex-col-reverse gap-1 w-full flex-1 justify-start overflow-y-auto pt-1">
                   {bucketValues.map((val, itemIdx) => {
                     const isTransferring = isReleasing && val === writeBackVal;
                     return (
                       <motion.div
                         key={itemIdx}
                         layout
-                        className={`w-full py-1 text-center font-mono text-xs font-extrabold rounded-md border ${
+                        className={`w-full py-0.5 sm:py-1 text-center font-mono text-[9px] sm:text-xs font-black rounded border truncate shadow-sm ${
                           isTransferring
                             ? "bg-rose-500 border-rose-500 text-white animate-pulse shadow-md"
                             : "bg-slate-900 border-white/10 text-gray-200"
@@ -132,6 +148,9 @@ export default function RadixVisualizer({
                       </motion.div>
                     );
                   })}
+                  {bucketValues.length === 0 && (
+                    <span className="text-[7.5px] font-mono text-gray-600 mt-auto mb-1">empty</span>
+                  )}
                 </div>
               </div>
             );

@@ -49,11 +49,17 @@ import {
   Scale,
   Lightbulb,
   Compass,
+  Keyboard,
+  History,
+  MessageSquare,
+  Check,
+  Info,
+  Activity,
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
 import VisualizerFactory from "./components/visualizers/VisualizerFactory";
-import { ALGO_LAYOUTS } from "./components/visualizers/BaseVisualizer";
+import { ALGO_LAYOUTS, getAlgorithmLayout } from "./components/visualizers/BaseVisualizer";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -1546,14 +1552,31 @@ function SortMentorContent() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitleText, setEditTitleText] = useState("");
 
+  const [chatDrawerTab, setChatDrawerTab] = useState<"chat" | "sessions">("chat");
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isSpecsPopoverOpen, setIsSpecsPopoverOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
+
   const [customArrayText, setCustomArrayText] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [arrayValidation, setArrayValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    count?: number;
+    parsed?: number[];
+  } | null>(null);
 
   const resizerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
 
-  const displaySpeed = 1550 - speed;
   const algoParam = searchParams ? searchParams.get("algorithm") : null;
 
   const saveConversations = useCallback((updated: Conversation[]) => {
@@ -1812,39 +1835,78 @@ function SortMentorContent() {
     setIsPlaying,
   ]);
 
-  const applyCustomArray = () => {
-    setValidationError(null);
-    const cleaned = customArrayText.replace(/\s+/g, "");
+  const validateArrayInput = (text: string, currentAlgo: string) => {
+    const cleaned = text.replace(/\s+/g, "");
     if (!cleaned) {
-      setValidationError("Array input cannot be empty.");
-      return;
+      setArrayValidation(null);
+      setValidationError(null);
+      return null;
     }
 
-    const items = cleaned.split(",");
+    const items = cleaned.split(",").filter((s) => s.length > 0);
     const parsed: number[] = [];
 
     for (const val of items) {
       if (!/^-?\d+$/.test(val)) {
-        setValidationError("Only integer numbers are allowed.");
-        return;
+        const error = "Only integer numbers are allowed (e.g. 10, -5, 24).";
+        setArrayValidation({ isValid: false, message: error });
+        setValidationError(error);
+        return null;
       }
       parsed.push(Number(val));
     }
 
+    if (parsed.length === 0) {
+      const error = "Array input cannot be empty.";
+      setArrayValidation({ isValid: false, message: error });
+      setValidationError(error);
+      return null;
+    }
+
     if (parsed.length > 16) {
-      setValidationError("Maximum array length is 16.");
-      return;
+      const error = `Length is ${parsed.length}. Maximum allowed size is 16 elements.`;
+      setArrayValidation({ isValid: false, message: error });
+      setValidationError(error);
+      return null;
     }
-    if (parsed.length < 1) {
-      setValidationError("Minimum array length is 1.");
-      return;
+
+    const isNonNegativeAlgo = currentAlgo === "counting" || currentAlgo === "radix";
+    if (isNonNegativeAlgo && parsed.some((n) => n < 0)) {
+      const error = `${currentAlgo === "counting" ? "Counting Sort" : "Radix Sort"} standard mode requires non-negative integers (≥ 0).`;
+      setArrayValidation({ isValid: false, message: error });
+      setValidationError(error);
+      return null;
     }
+
+    const successMsg = `Valid array: ${parsed.length} element${parsed.length > 1 ? "s" : ""}.`;
+    setArrayValidation({ isValid: true, message: successMsg, count: parsed.length, parsed });
+    setValidationError(null);
+    return parsed;
+  };
+
+  const applyCustomArray = () => {
+    const parsed = validateArrayInput(customArrayText, algorithm);
+    if (!parsed) return;
 
     setIsPlaying(false);
     resetPlayback();
     setOriginalArray(parsed);
     setArray([...parsed]);
     setArraySize(parsed.length);
+    setSteps([]);
+    setSteps2([]);
+    setMetrics(null);
+    setMetrics2(null);
+  };
+
+  const applyPresetArray = (presetArr: number[]) => {
+    setCustomArrayText(presetArr.join(", "));
+    validateArrayInput(presetArr.join(", "), algorithm);
+    setIsPlaying(false);
+    resetPlayback();
+    setOriginalArray(presetArr);
+    setArray([...presetArr]);
+    setArraySize(presetArr.length);
     setSteps([]);
     setSteps2([]);
     setMetrics(null);
@@ -1940,6 +2002,12 @@ function SortMentorContent() {
         return;
       }
 
+      if (e.key === "?" || (e.shiftKey && e.code === "Slash")) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+        return;
+      }
+
       switch (e.code) {
         case "Space":
           e.preventDefault();
@@ -1971,7 +2039,15 @@ function SortMentorContent() {
           break;
         case "Escape":
           e.preventDefault();
-          setIsChatOpen(false);
+          if (isShortcutsOpen) {
+            setIsShortcutsOpen(false);
+          } else if (confirmModal?.isOpen) {
+            setConfirmModal(null);
+          } else if (isFullscreen) {
+            setIsFullscreen(false);
+          } else if (isChatOpen) {
+            setIsChatOpen(false);
+          }
           break;
       }
     },
@@ -1986,6 +2062,10 @@ function SortMentorContent() {
       setCurrentStepIndex,
       setCurrentStepIndex2,
       setIsPlaying,
+      isShortcutsOpen,
+      confirmModal,
+      isFullscreen,
+      isChatOpen,
     ]
   );
 
@@ -2053,18 +2133,137 @@ function SortMentorContent() {
         headers: requestHeaders,
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      appendMessage("ai", data.explanation);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.explanation || data.answer || data.message) {
+          appendMessage("ai", data.explanation || data.answer || data.message);
+          setIsTutorThinking(false);
+          return;
+        }
+      }
     } catch {
       setTimeout(() => {
-        appendMessage(
-          "ai",
-          `At step ${currentStepIndex + 1}, ${algorithm} is performing a ${
-            steps[currentStepIndex]?.event_type || "state"
-          } transition.`
-        );
+        const guide = ALGO_GUIDES[algorithm.toLowerCase()] || ALGO_GUIDES.bubble;
+        const activeStep = steps[currentStepIndex];
+        const eventType = (activeStep?.event_type || "transition").toLowerCase();
+        const msg = activeStep?.message || "Standard transition";
+        const currArr = activeStep?.array || originalArray;
+
+        let eventExplanation = "";
+        const [c1, c2] = activeStep?.compare || [-1, -1];
+        const [s1, s2] = activeStep?.swap || [-1, -1];
+
+        switch (algorithm.toLowerCase()) {
+          case "bubble":
+            if (eventType.includes("compare") && c1 >= 0 && c2 >= 0) {
+              eventExplanation = `Testing adjacent pair \`arr[${c1}]=${currArr[c1]}\` and \`arr[${c2}]=${currArr[c2]}\`. If \`${currArr[c1]} > ${currArr[c2]}\`, an inversion exists and they must swap.`;
+            } else if (eventType.includes("swap") && s1 >= 0 && s2 >= 0) {
+              eventExplanation = `Swapping \`arr[${s1}]\` and \`arr[${s2}]\` to move the larger value closer to its final rightmost position.`;
+            } else {
+              eventExplanation = `Locked element into its permanent sorted suffix position.`;
+            }
+            break;
+
+          case "selection":
+            if (eventType.includes("compare") && c1 >= 0 && c2 >= 0) {
+              eventExplanation = `Scanning index \`${c2}\` (\`${currArr[c2]}\`) against current sub-array minimum at index \`${c1}\` (\`${currArr[c1]}\`).`;
+            } else if (eventType.includes("swap") && s1 >= 0 && s2 >= 0) {
+              eventExplanation = `Found the absolute minimum in the remaining unsorted subarray and placed it at index \`${s1}\`.`;
+            }
+            break;
+
+          case "insertion":
+            if (eventType.includes("compare") && c1 >= 0 && c2 >= 0) {
+              eventExplanation = `Comparing key element \`${currArr[c1]}\` with sorted prefix element \`arr[${c2}]=${currArr[c2]}\`.`;
+            } else if (eventType.includes("shift") || eventType.includes("swap")) {
+              eventExplanation = `Shifting larger elements one position to the right to carve out the correct insertion slot.`;
+            } else {
+              eventExplanation = `Inserted key into its proper sorted prefix slot.`;
+            }
+            break;
+
+          case "quick":
+            if (activeStep?.pivot !== undefined) {
+              eventExplanation = `Partitioning sub-array around pivot **${activeStep.pivot}**. Pointers \`i\` and \`j\` scan from both ends to group elements $< ${activeStep.pivot}$ to the left and $\\ge ${activeStep.pivot}$ to the right.`;
+            } else if (s1 >= 0 && s2 >= 0) {
+              eventExplanation = `Swapped cross-partition elements \`arr[${s1}]\` and \`arr[${s2}]\` to restore partition invariance.`;
+            }
+            break;
+
+          case "merge":
+            if (eventType.includes("split") || eventType.includes("divide")) {
+              eventExplanation = `Dividing subarray into two halves to recursively conquer smaller subarrays.`;
+            } else if (eventType.includes("merge") || eventType.includes("compare")) {
+              eventExplanation = `Comparing heads of the two sorted sub-lists and merging the smaller element back into the primary buffer.`;
+            }
+            break;
+
+          case "heap":
+            if (eventType.includes("compare")) {
+              eventExplanation = `Heapify comparison: checking root node against its left and right children in the binary max-heap.`;
+            } else if (eventType.includes("swap")) {
+              eventExplanation = `Sifting down larger child to maintain the Max-Heap property (Parent ≥ Children).`;
+            } else {
+              eventExplanation = `Extracted maximum root element and placed it at the current sorted end boundary.`;
+            }
+            break;
+
+          case "counting":
+            if (eventType.includes("count") || eventType.includes("frequency")) {
+              eventExplanation = `Tallying element frequencies directly into the counting array index.`;
+            } else {
+              eventExplanation = `Writing elements back into the sorted array in stable order using cumulative frequency offsets.`;
+            }
+            break;
+
+          case "radix":
+            eventExplanation = `Distributing elements into 0–9 digit buckets based on the current exponent place value (LSD).`;
+            break;
+
+          case "bucket":
+            if (eventType.includes("distribute") || eventType.includes("bucket")) {
+              eventExplanation = `Mapping numbers into proportional bucket ranges and placing them into bucket cups.`;
+            } else {
+              eventExplanation = `Sorting each bucket individually with insertion sort and concatenating into the final array.`;
+            }
+            break;
+
+          case "shell":
+            eventExplanation = `Comparing elements separated by gap h. Interleaved insertion sort accelerates long-distance shifts.`;
+            break;
+
+          case "timsort":
+            eventExplanation = `Detecting natural monotonic runs and extending them via binary insertion before merging runs on the stack.`;
+            break;
+
+          default:
+            eventExplanation = `Performing ${eventType} operation at step ${currentStepIndex + 1}.`;
+        }
+
+        const optTimeBest = guide.timeBest.split("-")[0].trim().replace(/^O\(/, "Ω(");
+        const optTimeAvg = guide.timeAvg.split("-")[0].trim().replace(/^O\(/, "Θ(");
+        const optTimeWorst = guide.timeWorst.split("-")[0].trim();
+
+        const fallback = `### Step ${currentStepIndex + 1} of ${steps.length}: ${guide.name} Analysis
+
+**Active Event:** \`${eventType.toUpperCase()}\`
+${activeStep?.message ? `> *"${activeStep.message}"*` : ""}
+
+**Step Interpretation:**
+${eventExplanation}
+
+**Algorithmic Invariant:**
+${guide.step1_goal}
+
+* **Complexity:** Best \`${optTimeBest}\` · Average \`${optTimeAvg}\` · Worst \`${optTimeWorst}\`
+* **Memory:** \`${guide.space.split("-")[0].trim()}\` (${guide.whySpace})
+* **Stability:** ${guide.stable ? "✓ Guaranteed Stable" : "✗ Unstable"}
+
+*Tip: Press **Space** to play/pause, or use **←** and **→** to manually step.*`;
+
+        appendMessage("ai", fallback);
         setIsTutorThinking(false);
-      }, 500);
+      }, 350);
       return;
     }
     setIsTutorThinking(false);
@@ -2127,6 +2326,62 @@ function SortMentorContent() {
       return c;
     });
     saveConversations(list);
+  };
+
+  const promptClearChat = () => {
+    if (!activeChatId) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Clear Chat Session?",
+      message: "Are you sure you want to clear all messages in this tutoring session? This cannot be undone.",
+      confirmLabel: "Clear Messages",
+      onConfirm: () => {
+        clearChat();
+        setConfirmModal(null);
+      },
+    });
+  };
+
+  const promptDeleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const target = conversations.find((c) => c.id === id);
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Tutoring Session?",
+      message: `Are you sure you want to delete "${target?.title || "this session"}"? This will permanently remove its chat history.`,
+      confirmLabel: "Delete Session",
+      onConfirm: () => {
+        deleteConversation(id, e);
+        setConfirmModal(null);
+      },
+    });
+  };
+
+  const promptChangeAlgorithm = (newAlgo: string) => {
+    if (steps.length > 0 && currentStepIndex > 0 && currentStepIndex < steps.length - 1) {
+      setConfirmModal({
+        isOpen: true,
+        title: "Change Algorithm?",
+        message: "You have an active visualization run in progress. Changing the algorithm will reset your current execution step. Do you want to continue?",
+        confirmLabel: "Change & Reset",
+        onConfirm: () => {
+          setAlgorithm(newAlgo);
+          setViewMode("intro");
+          setGuidedStep(1);
+          setIsPlaying(false);
+          setSteps([]);
+          setCurrentStepIndex(0);
+          setConfirmModal(null);
+        },
+      });
+    } else {
+      setAlgorithm(newAlgo);
+      setViewMode("intro");
+      setGuidedStep(1);
+      setIsPlaying(false);
+      setSteps([]);
+      setCurrentStepIndex(0);
+    }
   };
 
   const exportChat = () => {
@@ -2403,6 +2658,12 @@ function SortMentorContent() {
       activeStep2?.pivot !== undefined ? String(activeStep2.pivot) : "None",
   };
 
+  const activeLayout = getAlgorithmLayout(algorithm);
+  const activeLayout2 = battleMode ? getAlgorithmLayout(algorithm2) : null;
+  const dynamicMinHeight = battleMode && activeLayout2
+    ? Math.max(activeLayout.minHeight, activeLayout2.minHeight)
+    : activeLayout.minHeight;
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-950 font-sans select-none text-gray-100">
       {/* Top Main Navbar */}
@@ -2436,15 +2697,23 @@ function SortMentorContent() {
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setBattleMode(!battleMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all cursor-pointer border ${
+            onClick={() => {
+              const nextMode = !battleMode;
+              setBattleMode(nextMode);
+              if (nextMode && viewMode === "intro") {
+                setViewMode("visualizer");
+              }
+            }}
+            aria-label={battleMode ? "Disable Battle Arena (Switch to Solo Mode)" : "Enable Battle Arena (Compare 2 Algorithms Side-by-Side)"}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer border ${
               battleMode
-                ? "bg-gradient-to-r from-pink-500/20 to-indigo-500/20 border-indigo-500/50 text-indigo-200"
-                : "bg-slate-900/60 border-white/5 text-gray-400 hover:text-gray-200 hover:border-white/10"
+                ? "bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-indigo-500/20 border-pink-500/40 text-pink-200 shadow-md shadow-pink-500/10 ring-1 ring-pink-500/30"
+                : "bg-slate-900/80 border-white/10 text-gray-400 hover:text-gray-200 hover:border-white/20"
             }`}
           >
-            <Swords className="h-3.5 w-3.5" />
-            Arena {battleMode ? "Active" : "OFF"}
+            <Swords className={`h-3.5 w-3.5 transition-transform ${battleMode ? "text-pink-400 scale-110" : "text-gray-400"}`} />
+            <span>{battleMode ? "Battle Arena Active" : "Battle Arena"}</span>
+            <span className={`w-2 h-2 rounded-full ${battleMode ? "bg-pink-400 shadow-sm shadow-pink-400 animate-pulse" : "bg-gray-600"}`} />
           </button>
           <ShareButton />
           <UserDropdown />
@@ -2455,7 +2724,7 @@ function SortMentorContent() {
       <div className="flex-1 flex overflow-hidden relative">
         <div
           className={`flex-1 flex flex-col min-w-0 p-3 lg:p-4 gap-3 h-full ${
-            viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
+            viewMode === "intro" ? "overflow-y-auto" : "overflow-y-auto"
           }`}
         >
           {/* Top Quick Settings Bar (Collapsible - only in intro mode) */}
@@ -2523,13 +2792,7 @@ function SortMentorContent() {
                     </span>
                     <select
                       value={algorithm}
-                      onChange={(e) => {
-                        setAlgorithm(e.target.value);
-                        setViewMode("intro");
-                        setIsPlaying(false);
-                        setSteps([]);
-                        setCurrentStepIndex(0);
-                      }}
+                      onChange={(e) => promptChangeAlgorithm(e.target.value)}
                       className="w-full bg-slate-950 border border-white/10 rounded-lg p-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
                     >
                       <option value="bubble">Bubble Sort</option>
@@ -2603,49 +2866,116 @@ function SortMentorContent() {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-white/5">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={customArrayText}
-                      onChange={(e) => setCustomArrayText(e.target.value)}
-                      placeholder="e.g. 8, 3, -5, 1, 9, 2"
-                      className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs font-mono text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 pr-8"
-                    />
-                    {validationError && (
-                      <div
-                        className="absolute right-2.5 top-1.5 text-rose-400"
-                        title={validationError}
+                {/* Custom Array Input & Quick Presets Strip */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={customArrayText}
+                        onChange={(e) => {
+                          setCustomArrayText(e.target.value);
+                          validateArrayInput(e.target.value, algorithm);
+                        }}
+                        placeholder="e.g. 45, 12, 89, 34, 70, 23 (max 16 items)"
+                        className={`w-full bg-slate-950 border rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-gray-500 focus:outline-none transition-colors pr-8 ${
+                          arrayValidation
+                            ? arrayValidation.isValid
+                              ? "border-emerald-500/50 focus:border-emerald-400"
+                              : "border-rose-500/50 focus:border-rose-400"
+                            : "border-white/10 focus:border-indigo-500"
+                        }`}
+                      />
+                      {arrayValidation && (
+                        <div className="absolute right-2.5 top-2">
+                          {arrayValidation.isValid ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={applyCustomArray}
+                        disabled={arrayValidation ? !arrayValidation.isValid : !customArrayText.trim()}
+                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-40 shrink-0 transition-all shadow-md shadow-indigo-600/30"
                       >
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      </div>
-                    )}
+                        Apply Array
+                      </button>
+                      <button
+                        onClick={generateNewArray}
+                        className="px-2.5 py-1.5 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                      >
+                        Randomize
+                      </button>
+                      <button
+                        onClick={shuffleArray}
+                        className="px-2.5 py-1.5 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                      >
+                        Shuffle
+                      </button>
+                      <button
+                        onClick={() => setIsConfigCollapsed(true)}
+                        className="px-2.5 py-1.5 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all flex items-center gap-1"
+                      >
+                        <Minimize2 className="h-3 w-3" />
+                        Collapse
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={applyCustomArray}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+
+                  {/* Inline Live Feedback & Validation Banner (Accessible with role=alert) */}
+                  {arrayValidation && (
+                    <div
+                      role="alert"
+                      aria-live="polite"
+                      className={`text-[11px] font-mono px-2.5 py-1 rounded-md flex items-center gap-1.5 border ${
+                        arrayValidation.isValid
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                          : "bg-rose-500/10 border-rose-500/20 text-rose-300"
+                      }`}
                     >
-                      Apply
+                      {arrayValidation.isValid ? (
+                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                      ) : (
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                      )}
+                      <span>{arrayValidation.message}</span>
+                    </div>
+                  )}
+
+                  {/* Quick Edge-Case Test Presets */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono pt-1 text-gray-400">
+                    <span className="font-bold text-slate-500 uppercase">Test Presets:</span>
+                    <button
+                      onClick={() => applyPresetArray([95, 82, 71, 63, 50, 42, 33, 21, 10])}
+                      aria-label="Load reverse-sorted worst-case array"
+                      className="px-2 py-0.5 rounded bg-slate-950/80 hover:bg-slate-800 border border-white/5 hover:border-white/20 text-gray-300 hover:text-white transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
+                    >
+                      Reverse (Worst Case)
                     </button>
                     <button
-                      onClick={generateNewArray}
-                      className="px-2.5 py-1 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                      onClick={() => applyPresetArray([10, 20, 25, 40, 35, 50, 60, 75, 90])}
+                      aria-label="Load nearly-sorted array"
+                      className="px-2 py-0.5 rounded bg-slate-950/80 hover:bg-slate-800 border border-white/5 hover:border-white/20 text-gray-300 hover:text-white transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
                     >
-                      Generate
+                      Nearly Sorted
                     </button>
                     <button
-                      onClick={shuffleArray}
-                      className="px-2.5 py-1 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all"
+                      onClick={() => applyPresetArray([40, 10, 40, 25, 10, 80, 25, 40, 10])}
+                      aria-label="Load array with multiple duplicates"
+                      className="px-2 py-0.5 rounded bg-slate-950/80 hover:bg-slate-800 border border-white/5 hover:border-white/20 text-gray-300 hover:text-white transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
                     >
-                      Shuffle
+                      Duplicates (Stability)
                     </button>
                     <button
-                      onClick={() => setIsConfigCollapsed(true)}
-                      className="px-2.5 py-1 bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-all flex items-center gap-1"
+                      onClick={() => applyPresetArray([1, 0, 1, 1, 0, 0, 1, 0, 1])}
+                      aria-label="Load binary 0 and 1 array"
+                      className="px-2 py-0.5 rounded bg-slate-950/80 hover:bg-slate-800 border border-white/5 hover:border-white/20 text-gray-300 hover:text-white transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
                     >
-                      <Minimize2 className="h-3 w-3" />
-                      Collapse
+                      Binary (0s & 1s)
                     </button>
                   </div>
                 </div>
@@ -2656,12 +2986,13 @@ function SortMentorContent() {
           {/* Unified Visualizer & Side-by-Side Explanation Area */}
             <div
             ref={visualizerCardRef}
-              className={`flex-1 flex flex-col min-h-0 bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl ${
+            style={!isFullscreen ? { minHeight: `${dynamicMinHeight}px` } : undefined}
+              className={`flex-1 flex flex-col bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl transition-[min-height] duration-300 ${
                 viewMode === "intro" ? "overflow-y-auto min-h-fit" : "overflow-hidden"
               } ${
                 isFullscreen
                   ? "fixed inset-0 z-50 bg-slate-950 p-4"
-                  : "relative"
+                  : "relative min-h-[380px]"
               }`}
             >
               {/* Top Toolbar Header (Contains Playback Controls, Telemetry Pills, Timeline & Tools) */}
@@ -2710,6 +3041,105 @@ function SortMentorContent() {
                           </span>
                         )}
                       </div>
+
+                      {/* Dynamic Layout Badge */}
+                      <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                        {activeLayout.layoutLabel}
+                      </span>
+
+                      {/* Educational Complexity & Invariants HUD Badge (Large screens) */}
+                      {(() => {
+                        const guide = ALGO_GUIDES[algorithm.toLowerCase()] || ALGO_GUIDES.bubble;
+                        const optBest = guide.timeBest.split("-")[0].trim().replace(/^O\(/, "Ω(");
+                        const optAvg = guide.timeAvg.split("-")[0].trim().replace(/^O\(/, "Θ(");
+                        const optWorst = guide.timeWorst.split("-")[0].trim();
+                        const optSpace = guide.space.split("-")[0].trim();
+
+                        return (
+                          <>
+                            <div className="hidden lg:flex items-center gap-2 font-mono text-[10.5px] bg-slate-900/90 border border-white/10 px-3 py-1 rounded-xl text-slate-300 shadow-inner">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-gray-500 font-bold uppercase text-[9px]">Complexity:</span>
+                                <span className="text-emerald-400 font-bold" title="Best Case: Lower Bound Ω">{optBest}</span>
+                                <span className="text-gray-600">·</span>
+                                <span className="text-indigo-300 font-bold" title="Average Case: Tight Bound Θ">{optAvg}</span>
+                                <span className="text-gray-600">·</span>
+                                <span className="text-rose-400 font-bold" title="Worst Case: Upper Bound O">{optWorst}</span>
+                              </div>
+                              <span className="text-white/15">|</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500 font-bold uppercase text-[9px]">Memory:</span>
+                                <span className="text-amber-300 font-bold">{optSpace}</span>
+                              </div>
+                              <span className="text-white/15">|</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500 font-bold uppercase text-[9px]">Stable:</span>
+                                <span className={guide.stable ? "text-emerald-400 font-bold" : "text-gray-400"}>
+                                  {guide.stable ? "✓ Yes" : "✗ No"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Compact Specs & Growth Popover for Mobile/Tablet (< lg) */}
+                            <div className="relative lg:hidden">
+                              <button
+                                onClick={() => setIsSpecsPopoverOpen(!isSpecsPopoverOpen)}
+                                aria-label="Toggle Algorithm Complexity & Specs"
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 border border-white/10 hover:border-indigo-500/40 text-indigo-300 font-mono text-[10px] font-bold cursor-pointer transition-all"
+                              >
+                                <Info className="h-3 w-3 text-indigo-400" />
+                                <span>Specs</span>
+                              </button>
+
+                              <AnimatePresence>
+                                {isSpecsPopoverOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 5 }}
+                                    className="absolute left-0 top-full mt-2 z-40 w-64 bg-slate-900 border border-white/15 rounded-xl p-3 shadow-2xl backdrop-blur-md flex flex-col gap-2 text-xs font-mono text-slate-300"
+                                  >
+                                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5 font-bold text-white">
+                                      <span>{guide.name} Specs</span>
+                                      <button
+                                        onClick={() => setIsSpecsPopoverOpen(false)}
+                                        className="text-gray-400 hover:text-white"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                    <div className="flex flex-col gap-1 text-[11px]">
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Best Time (Ω):</span>
+                                        <span className="text-emerald-400 font-bold">{optBest}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Avg Time (Θ):</span>
+                                        <span className="text-indigo-300 font-bold">{optAvg}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Worst Time (O):</span>
+                                        <span className="text-rose-400 font-bold">{optWorst}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Memory Space:</span>
+                                        <span className="text-amber-300 font-bold">{optSpace}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Stability:</span>
+                                        <span className={guide.stable ? "text-emerald-400 font-bold" : "text-gray-400"}>
+                                          {guide.stable ? "✓ Guaranteed Stable" : "✗ Unstable"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* Center: Playback Controls */}
@@ -2839,28 +3269,45 @@ function SortMentorContent() {
 
                       <button
                         onClick={() => setViewMode(viewMode === "intro" ? "visualizer" : "intro")}
+                        aria-label={viewMode === "intro" ? "Switch to Interactive Visualizer" : "Switch to 3-Step Guided Learning"}
                         className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer transition-all"
-                        title={viewMode === "intro" ? "Open Visualizer" : "Open 3-Step Guide"}
+                        title={viewMode === "intro" ? "Open Visualizer" : "Open 3-Step Theory Guide"}
                       >
-                        <GraduationCap className="h-3.5 w-3.5" />
+                        <BookOpen className="h-3.5 w-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => setIsShortcutsOpen(true)}
+                        aria-label="View Keyboard Shortcuts (?)"
+                        className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer transition-all"
+                        title="Keyboard Shortcuts (?)"
+                      >
+                        <Keyboard className="h-3.5 w-3.5" />
                       </button>
 
                       <div className="w-[1px] h-4 bg-white/10 mx-0.5" />
 
-                      {/* Zoom Controls */}
+                      {/* Zoom Controls with 100% Reset */}
                       <div className="flex items-center bg-slate-900 rounded-lg border border-white/5 p-0.5">
                         <button
                           onClick={() => setZoom(Math.max(0.6, zoom - 0.1))}
+                          aria-label="Zoom Out"
                           className="p-1 text-gray-400 hover:text-white rounded hover:bg-slate-800"
                           title="Zoom Out"
                         >
                           <ZoomOut className="h-3 w-3" />
                         </button>
-                        <span className="text-[10px] font-mono text-gray-400 px-1 select-none">
+                        <button
+                          onClick={() => setZoom(1)}
+                          aria-label="Reset zoom to 100%"
+                          className="text-[10px] font-mono text-gray-300 hover:text-indigo-400 px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Click to reset zoom to 100%"
+                        >
                           {Math.round(zoom * 100)}%
-                        </span>
+                        </button>
                         <button
                           onClick={() => setZoom(Math.min(1.6, zoom + 0.1))}
+                          aria-label="Zoom In"
                           className="p-1 text-gray-400 hover:text-white rounded hover:bg-slate-800"
                           title="Zoom In"
                         >
@@ -2870,8 +3317,9 @@ function SortMentorContent() {
 
                       <button
                         onClick={() => setIsFullscreen(!isFullscreen)}
+                        aria-label={isFullscreen ? "Exit Fullscreen (Esc)" : "Enter Fullscreen"}
                         className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer"
-                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen"}
                       >
                         {isFullscreen ? (
                           <Minimize2 className="h-3.5 w-3.5" />
@@ -2883,6 +3331,7 @@ function SortMentorContent() {
                       <button
                         onClick={exportReplay}
                         disabled={steps.length === 0}
+                        aria-label="Export Replay JSON"
                         className="p-1.5 rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 text-gray-400 hover:text-white text-xs cursor-pointer disabled:opacity-40"
                         title="Export Replay JSON"
                       >
@@ -2946,14 +3395,7 @@ function SortMentorContent() {
                                 </h2>
                                 <select
                                   value={algorithm}
-                                  onChange={(e) => {
-                                    setAlgorithm(e.target.value);
-                                    setViewMode("intro");
-                                    setGuidedStep(1);
-                                    setIsPlaying(false);
-                                    setSteps([]);
-                                    setCurrentStepIndex(0);
-                                  }}
+                                  onChange={(e) => promptChangeAlgorithm(e.target.value)}
                                   className="bg-slate-950/80 hover:bg-slate-900 border border-indigo-500/30 rounded-xl px-2.5 py-1 text-xs font-bold text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer transition-all shadow-md ml-1"
                                   title="Switch Algorithm"
                                 >
@@ -3342,7 +3784,7 @@ function SortMentorContent() {
                             )}
                           </div>
 
-                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                             <button
                               onClick={async () => {
                                 setViewMode("visualizer");
@@ -3353,10 +3795,15 @@ function SortMentorContent() {
                                 setIsPlaying(false);
                                 setCurrentStepIndex(0);
                               }}
-                              className="flex-1 sm:flex-initial px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 rounded-xl text-sm font-bold cursor-pointer transition-all flex items-center justify-center gap-2 shadow"
+                              className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-white/10 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg group hover:border-white/20"
                             >
-                              <RotateCcw className="h-4 w-4" />
-                              <span>Step-by-Step</span>
+                              <div className="flex items-center gap-2">
+                                <RotateCcw className="h-4 w-4 text-indigo-400 group-hover:-rotate-45 transition-transform" />
+                                <span>Interactive Step-by-Step</span>
+                              </div>
+                              <span className="text-[10px] font-normal text-gray-400">
+                                Paused at Step 1 for manual navigation (← / →)
+                              </span>
                             </button>
 
                             <button
@@ -3368,10 +3815,15 @@ function SortMentorContent() {
                                 }
                                 setIsPlaying(true);
                               }}
-                              className="flex-1 sm:flex-initial px-8 py-3 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-sm sm:text-base rounded-xl shadow-xl shadow-indigo-600/30 cursor-pointer flex items-center justify-center gap-2.5 transition-all transform hover:scale-[1.02]"
+                              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-xs sm:text-sm rounded-xl shadow-xl shadow-indigo-600/30 cursor-pointer flex flex-col items-center justify-center gap-0.5 transition-all transform hover:scale-[1.02]"
                             >
-                              <Zap className="h-4 w-4 animate-pulse" />
-                              <span>Start Visualization</span>
+                              <div className="flex items-center gap-2">
+                                <Zap className="h-4 w-4 animate-pulse" />
+                                <span>Autoplay Simulation</span>
+                              </div>
+                              <span className="text-[10px] font-normal text-indigo-200">
+                                Full animated execution at chosen speed
+                              </span>
                             </button>
                           </div>
                         </div>
@@ -3404,7 +3856,10 @@ function SortMentorContent() {
                     )}
 
                     {/* Canvas Stage */}
-                    <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden">
+                    <div 
+                      className="flex-1 min-h-[200px] flex flex-col justify-center relative overflow-hidden"
+                      style={activeLayout.hasMultiTier ? { minHeight: `${Math.max(260, activeLayout.minHeight - 140)}px` } : undefined}
+                    >
                       <VisualizerFactory
                         array={array}
                         originalArray={originalArray}
@@ -3495,7 +3950,10 @@ function SortMentorContent() {
                         </div>
                       </div>
 
-                      <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden py-1">
+                      <div 
+                        className="flex-1 min-h-[200px] flex flex-col justify-center relative overflow-hidden py-1"
+                        style={activeLayout2?.hasMultiTier ? { minHeight: `${Math.max(260, (activeLayout2?.minHeight || 400) - 140)}px` } : undefined}
+                      >
                         <VisualizerFactory
                           array={
                             steps2[currentStepIndex2]?.array || originalArray
@@ -3555,7 +4013,7 @@ function SortMentorContent() {
               />
 
               {/* Chat Header */}
-              <div className="p-3 border-b border-white/5 flex flex-col gap-2">
+              <div className="p-3 border-b border-white/5 flex flex-col gap-2.5 bg-slate-950/40">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <GraduationCap className="h-4 w-4 text-indigo-400" />
@@ -3565,93 +4023,262 @@ function SortMentorContent() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={createEmptyChat}
-                      className="p-1 hover:bg-slate-800 rounded text-gray-400 hover:text-white"
+                      onClick={() => {
+                        createEmptyChat();
+                        setChatDrawerTab("chat");
+                      }}
+                      aria-label="Create new chat session"
+                      className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
                       title="New Chat Session"
                     >
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="h-4 w-4" />
                     </button>
+                    {chatDrawerTab === "chat" && (
+                      <>
+                        <button
+                          onClick={exportChat}
+                          aria-label="Export conversation"
+                          className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
+                          title="Export Conversation"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={promptClearChat}
+                          aria-label="Clear chat messages"
+                          className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-rose-400 transition-colors cursor-pointer"
+                          title="Clear Messages"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => setIsChatOpen(false)}
-                      className="p-1 hover:bg-slate-800 rounded text-gray-400 hover:text-white"
+                      aria-label="Close AI tutor drawer"
+                      className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search sessions..."
-                    value={chatSearchQuery}
-                    onChange={(e) => setChatSearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 border border-white/10 rounded-lg pl-7 pr-2.5 py-1 text-[11px] font-mono text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                  />
-                  <Search className="absolute left-2 top-2 h-3 w-3 text-gray-500" />
-                </div>
-              </div>
-
-              {/* Messages Feed */}
-              <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-3">
-                {activeConversation?.messages.map((chat, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex flex-col gap-0.5 max-w-[85%] ${
-                      chat.sender === "user"
-                        ? "self-end items-end"
-                        : "self-start items-start"
+                {/* View Switcher Tabs: Active Chat vs Sessions History */}
+                <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-950 rounded-xl border border-white/5 text-xs font-mono">
+                  <button
+                    onClick={() => setChatDrawerTab("chat")}
+                    className={`py-1 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      chatDrawerTab === "chat"
+                        ? "bg-indigo-600 text-white shadow"
+                        : "text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span className="text-[8px] uppercase font-mono tracking-wider text-gray-500">
-                      {chat.sender === "user" ? "You" : "SortMentor"}
-                    </span>
-                    <div
-                      className={`p-2.5 rounded-xl text-xs leading-relaxed ${
-                        chat.sender === "user"
-                          ? "bg-indigo-600 text-white rounded-tr-none"
-                          : "bg-slate-900/60 border border-white/5 text-gray-300 rounded-tl-none"
-                      }`}
-                    >
-                      {renderMarkdown(chat.text)}
-                    </div>
-                  </div>
-                ))}
-
-                {isTutorThinking && (
-                  <div className="self-start flex flex-col gap-0.5 max-w-[85%]">
-                    <span className="text-[8px] uppercase font-mono tracking-wider text-gray-500">
-                      SortMentor
-                    </span>
-                    <div className="bg-slate-900/60 border border-white/5 p-2.5 rounded-xl rounded-tl-none flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full"></div>
-                      <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full delay-100"></div>
-                      <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full delay-200"></div>
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Chat Input */}
-              <div className="p-3 border-t border-white/5 bg-slate-950/40">
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={tutorMessage}
-                    onChange={(e) => setTutorMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && askAITutor()}
-                    placeholder="Ask why this swap happened..."
-                    className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                  />
+                    <MessageSquare className="h-3 w-3" />
+                    <span>Active Chat</span>
+                  </button>
                   <button
-                    onClick={askAITutor}
-                    className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-all"
+                    onClick={() => setChatDrawerTab("sessions")}
+                    className={`py-1 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      chatDrawerTab === "sessions"
+                        ? "bg-indigo-600 text-white shadow"
+                        : "text-slate-400 hover:text-white"
+                    }`}
                   >
-                    <Send className="h-3.5 w-3.5" />
+                    <History className="h-3 w-3" />
+                    <span>Sessions ({conversations.length})</span>
                   </button>
                 </div>
+
+                {chatDrawerTab === "sessions" && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search sessions..."
+                      value={chatSearchQuery}
+                      onChange={(e) => setChatSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg pl-7 pr-2.5 py-1 text-[11px] font-mono text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    />
+                    <Search className="absolute left-2 top-2 h-3 w-3 text-gray-500" />
+                  </div>
+                )}
               </div>
+
+              {/* Sessions List View */}
+              {chatDrawerTab === "sessions" ? (
+                <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-2">
+                  {filteredConversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-48 text-center gap-2 text-slate-500 text-xs font-mono">
+                      <MessageSquare className="h-8 w-8 text-slate-700" />
+                      <span>No matching sessions found.</span>
+                      <button
+                        onClick={() => {
+                          createEmptyChat();
+                          setChatDrawerTab("chat");
+                        }}
+                        className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Start New Chat
+                      </button>
+                    </div>
+                  ) : (
+                    filteredConversations.map((conv) => {
+                      const isActive = conv.id === activeChatId;
+                      const isEditing = editingChatId === conv.id;
+
+                      return (
+                        <div
+                          key={conv.id}
+                          onClick={() => {
+                            setActiveChatId(conv.id);
+                            setChatDrawerTab("chat");
+                          }}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 relative group ${
+                            isActive
+                              ? "bg-indigo-950/40 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30"
+                              : "bg-slate-950/60 border-white/5 hover:border-white/15 hover:bg-slate-900/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            {isEditing ? (
+                              <div
+                                className="flex items-center gap-1 flex-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="text"
+                                  value={editTitleText}
+                                  onChange={(e) => setEditTitleText(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && saveRenameConversation()}
+                                  className="flex-1 bg-slate-900 border border-indigo-500 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={saveRenameConversation}
+                                  aria-label="Save title"
+                                  className="p-1 rounded bg-indigo-600 text-white hover:bg-indigo-500"
+                                >
+                                  <Check className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                {conv.isPinned && (
+                                  <Pin className="h-3 w-3 text-amber-400 fill-amber-400 shrink-0" />
+                                )}
+                                <span className="font-bold text-xs text-white truncate">
+                                  {conv.title}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => togglePinConversation(conv.id, e)}
+                                aria-label={conv.isPinned ? "Unpin session" : "Pin session"}
+                                className={`p-1 rounded hover:bg-slate-800 ${
+                                  conv.isPinned ? "text-amber-400" : "text-gray-500 hover:text-gray-300"
+                                }`}
+                                title={conv.isPinned ? "Unpin session" : "Pin to top"}
+                              >
+                                <Pin className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => startRenameConversation(conv.id, conv.title, e)}
+                                aria-label="Rename session"
+                                className="p-1 rounded hover:bg-slate-800 text-gray-500 hover:text-gray-300"
+                                title="Rename"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => promptDeleteConversation(conv.id, e)}
+                                aria-label="Delete session"
+                                className="p-1 rounded hover:bg-slate-800 text-gray-500 hover:text-rose-400"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                            <span className="truncate max-w-[200px]">
+                              {conv.messages[conv.messages.length - 1]?.text.slice(0, 40) || "Empty session"}...
+                            </span>
+                            <span className="shrink-0 bg-slate-900 px-1.5 py-0.5 rounded border border-white/5">
+                              {conv.messages.length} msgs
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              ) : (
+                /* Messages Feed */
+                <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-3">
+                  {activeConversation?.messages.map((chat, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex flex-col gap-0.5 max-w-[85%] ${
+                        chat.sender === "user"
+                          ? "self-end items-end"
+                          : "self-start items-start"
+                      }`}
+                    >
+                      <span className="text-[9px] uppercase font-mono tracking-wider text-gray-500 font-semibold">
+                        {chat.sender === "user" ? "You" : "SortMentor"}
+                      </span>
+                      <div
+                        className={`p-2.5 rounded-xl text-xs leading-relaxed ${
+                          chat.sender === "user"
+                            ? "bg-indigo-600 text-white rounded-tr-none"
+                            : "bg-slate-900/60 border border-white/5 text-gray-300 rounded-tl-none"
+                        }`}
+                      >
+                        {renderMarkdown(chat.text)}
+                      </div>
+                    </div>
+                  ))}
+
+                  {isTutorThinking && (
+                    <div className="self-start flex flex-col gap-0.5 max-w-[85%]">
+                      <span className="text-[9px] uppercase font-mono tracking-wider text-gray-500 font-semibold">
+                        SortMentor
+                      </span>
+                      <div className="bg-slate-900/60 border border-white/5 p-2.5 rounded-xl rounded-tl-none flex items-center gap-1.5">
+                        <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full"></div>
+                        <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full delay-100"></div>
+                        <div className="h-1.5 w-1.5 animate-bounce bg-indigo-400 rounded-full delay-200"></div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              )}
+
+              {/* Chat Input */}
+              {chatDrawerTab === "chat" && (
+                <div className="p-3 border-t border-white/5 bg-slate-950/40">
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={tutorMessage}
+                      onChange={(e) => setTutorMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && askAITutor()}
+                      placeholder="Ask why this swap happened..."
+                      className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      onClick={askAITutor}
+                      aria-label="Send message to AI Tutor"
+                      className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-all"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -3660,13 +4287,125 @@ function SortMentorContent() {
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className="absolute right-4 bottom-4 p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/30 z-10 transition-all cursor-pointer"
-            title="Open AI Tutor"
+            aria-label="Open AI Tutor Chat Drawer"
+            className="absolute right-4 bottom-4 p-3.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/40 z-10 transition-all cursor-pointer ring-2 ring-indigo-400/30"
+            title="Open AI Tutor (Ask anything)"
           >
-            <GraduationCap className="h-4 w-4" />
+            <BrainCircuit className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Floating Exit Fullscreen Button */}
+        {isFullscreen && (
+          <button
+            onClick={() => setIsFullscreen(false)}
+            aria-label="Exit Fullscreen (Esc)"
+            className="fixed top-4 right-4 z-50 flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 border border-white/20 rounded-full text-xs font-bold text-gray-200 hover:text-white hover:bg-slate-800 backdrop-blur-md shadow-2xl cursor-pointer transition-all"
+            title="Exit Fullscreen (Esc)"
+          >
+            <Minimize2 className="h-3.5 w-3.5 text-indigo-400" />
+            <span>Exit Fullscreen</span>
+            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] text-gray-400 font-mono">
+              Esc
+            </kbd>
           </button>
         )}
       </div>
+
+      {/* Keyboard Shortcuts Modal */}
+      <AnimatePresence>
+        {isShortcutsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-slate-200"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <Keyboard className="h-5 w-5 text-indigo-400" />
+                  <h3 className="font-bold text-base text-white">Keyboard Shortcuts</h3>
+                </div>
+                <button
+                  onClick={() => setIsShortcutsOpen(false)}
+                  aria-label="Close shortcuts modal"
+                  className="p-1 rounded-lg hover:bg-slate-800 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-2.5 text-xs font-mono">
+                {[
+                  { key: "Space", desc: "Play or Pause execution" },
+                  { key: "← / →", desc: "Step Backward / Step Forward" },
+                  { key: "R", desc: "Reset array to initial state" },
+                  { key: "Esc", desc: "Exit Fullscreen / Close Panels" },
+                  { key: "?", desc: "Toggle this Shortcuts Guide" },
+                ].map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 rounded-xl bg-slate-950/70 border border-white/5"
+                  >
+                    <span className="text-slate-300 font-sans font-medium">{item.desc}</span>
+                    <kbd className="px-2.5 py-1 bg-slate-800 border border-white/15 rounded-lg text-indigo-300 font-bold shadow-inner">
+                      {item.key}
+                    </kbd>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setIsShortcutsOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/30"
+                >
+                  Got It
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal?.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-slate-200"
+            >
+              <div className="flex items-center gap-2.5 text-amber-400">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <h3 className="font-bold text-base text-white">{confirmModal.title}</h3>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {confirmModal.message}
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                >
+                  {confirmModal.cancelLabel || "Cancel"}
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all cursor-pointer shadow-lg shadow-rose-600/30"
+                >
+                  {confirmModal.confirmLabel || "Confirm"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

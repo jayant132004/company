@@ -107,16 +107,22 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit (max 1.5MB for Base64 storage)
-    if (file.size > 1.5 * 1024 * 1024) {
-      alert("Image is too large. Please select an image under 1.5MB.");
-      return;
-    }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        setAvatar(reader.result);
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 128, 128);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          setAvatar(compressedDataUrl);
+        }
+      };
+      if (typeof event.target?.result === "string") {
+        img.src = event.target.result;
       }
     };
     reader.readAsDataURL(file);
