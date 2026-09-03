@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.core.firebase import init_firebase
 from app.api.deps import get_current_user, get_current_user_optional
 from app.api.endpoints.sortmentor import router as sortmentor_router
+from app.api.endpoints.feedback import router as feedback_router
 from app.services.qdrant_service import index_knowledge_base
 from app.services.knowledge.recommendation_engine import generate_recommendations
 
@@ -37,6 +38,13 @@ app.include_router(
     sortmentor_router,
     prefix=f"{settings.API_V1_STR}/sortmentor",
     tags=["SortMentor"]
+)
+
+# Register the Feedback endpoints router
+app.include_router(
+    feedback_router,
+    prefix=f"{settings.API_V1_STR}/feedback",
+    tags=["Feedback"]
 )
 
 @app.get("/api/v1/auth/me", tags=["Auth"])

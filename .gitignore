@@ -25,4 +25,6 @@ instance/
 # Keys & Logs
 .env
 *.log
+*.jsonl
 backend/logs/
+backend/app/logs/

@@ -1,9 +1,14 @@
+# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
+Allow: /sortmentor
 Allow: /dashboard
+Allow: /login
 
-# Exclude private settings and user dashboard subpages from indexing
+# Exclude private user state pages
 Disallow: /profile
 Disallow: /settings
 
+# Canonical Sitemap Reference
 Sitemap: https://algoverse.io/sitemap.xml
+Host: https://algoverse.io
