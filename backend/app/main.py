@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.firebase import init_firebase
@@ -49,7 +49,8 @@ def verify_user(current_user: dict = Depends(get_current_user)):
     }
 
 @app.get("/api/v1/recommendations", tags=["Recommendations"])
-def get_recommendations(current_user: dict = Depends(get_current_user_optional)):
+def get_recommendations(response: Response, current_user: dict = Depends(get_current_user_optional)):
+    response.headers["Cache-Control"] = "private, max-age=60"
     uid = current_user.get("uid", "guest_student_id")
     recs = generate_recommendations(uid)
     return recs

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from pydantic import BaseModel
 from typing import List, Dict, Any, Tuple, Optional
 import time
@@ -122,7 +122,8 @@ def compare_sorting(payload: CompareRequest):
     return results
 
 @router.post("/analyze")
-def analyze_dataset(payload: AnalyzeRequest):
+def analyze_dataset(payload: AnalyzeRequest, response: Response):
+    response.headers["Cache-Control"] = "public, max-age=300"
     data = payload.data
     n = len(data)
     if n == 0:
