@@ -2,12 +2,15 @@ import React from "react";
 import { motion } from "framer-motion";
 import { VisualizerProps, getNormalizedHeight, getBarColorClass } from "./BaseVisualizer";
 import { Star } from "lucide-react";
+import StepGhostTrails from "./StepGhostTrails";
 
 export default function SelectionVisualizer({
   array,
   originalArray,
   steps,
   currentStepIndex,
+  speed,
+  ghostTrails = true,
   zoom,
   battleId
 }: VisualizerProps) {
@@ -22,7 +25,18 @@ export default function SelectionVisualizer({
       className="w-full h-full flex flex-col justify-start min-h-0 relative"
       style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
     >
-      <div className="flex-1 flex flex-col justify-start gap-2 p-2 sm:p-4 select-none overflow-y-auto min-h-0 max-h-full">
+      <div className="flex-1 flex flex-col justify-start gap-2 p-2 sm:p-4 select-none overflow-y-auto min-h-0 max-h-full relative">
+        {/* Step Ghost Trails & Motion Trajectory Overlay */}
+        <StepGhostTrails
+          array={array}
+          originalArray={originalArray}
+          steps={steps}
+          currentStepIndex={currentStepIndex}
+          speed={speed}
+          enabled={ghostTrails}
+          orientation="horizontal"
+          accentColor={accentColor as any}
+        />
         {array.map((val, idx) => {
           // Normalize height function calculates percentages, which we use as width here!
           const widthVal = getNormalizedHeight(val, originalArray);

@@ -39,6 +39,7 @@ import {
   Sparkle,
   ZoomIn,
   ZoomOut,
+  Ghost,
   BookOpen,
   Layers,
   Eye,
@@ -1533,6 +1534,7 @@ function SortMentorContent() {
   const [executionError, setExecutionError] = useState<string | null>(null);
 
   const [zoom, setZoom] = useState<number>(1);
+  const [ghostTrails, setGhostTrails] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"intro" | "visualizer">("intro");
   const [guidedStep, setGuidedStep] = useState<1 | 2 | 3>(1);
@@ -2036,6 +2038,10 @@ function SortMentorContent() {
         case "KeyR":
           e.preventDefault();
           resetPlayback();
+          break;
+        case "KeyT":
+          e.preventDefault();
+          setGhostTrails((prev) => !prev);
           break;
         case "Escape":
           e.preventDefault();
@@ -3285,6 +3291,23 @@ ${guide.step1_goal}
                         <Keyboard className="h-3.5 w-3.5" />
                       </button>
 
+                      {/* Step Ghost Trails Toggle Button */}
+                      <button
+                        onClick={() => setGhostTrails(!ghostTrails)}
+                        aria-label="Toggle Step Ghost Trails"
+                        className={`p-1.5 rounded-lg border text-xs cursor-pointer transition-all flex items-center gap-1 ${
+                          ghostTrails
+                            ? "bg-rose-500/15 border-rose-500/30 text-rose-300 hover:bg-rose-500/25 shadow-sm shadow-rose-500/20"
+                            : "bg-slate-900 border-white/5 text-gray-500 hover:text-gray-300 hover:bg-slate-800"
+                        }`}
+                        title={ghostTrails ? "Ghost Trails: ON (Click to disable trajectory arcs)" : "Ghost Trails: OFF (Click to enable trajectory arcs)"}
+                      >
+                        <Ghost className="h-3.5 w-3.5" />
+                        <span className="text-[9px] font-mono font-bold hidden sm:inline">
+                          {ghostTrails ? "Trails" : "No Trails"}
+                        </span>
+                      </button>
+
                       <div className="w-[1px] h-4 bg-white/10 mx-0.5" />
 
                       {/* Zoom Controls with 100% Reset */}
@@ -3883,6 +3906,7 @@ ${guide.step1_goal}
                         fullscreen={isFullscreen}
                         algorithmName={algorithm}
                         battleId={1}
+                        ghostTrails={ghostTrails}
                       />
                     </div>
 
@@ -3979,6 +4003,7 @@ ${guide.step1_goal}
                           fullscreen={isFullscreen}
                           algorithmName={algorithm2}
                           battleId={2}
+                          ghostTrails={ghostTrails}
                         />
                       </div>
 
@@ -4341,6 +4366,7 @@ ${guide.step1_goal}
                   { key: "Space", desc: "Play or Pause execution" },
                   { key: "← / →", desc: "Step Backward / Step Forward" },
                   { key: "R", desc: "Reset array to initial state" },
+                  { key: "T", desc: "Toggle Step Ghost Trails (Arcs & Silhouettes)" },
                   { key: "Esc", desc: "Exit Fullscreen / Close Panels" },
                   { key: "?", desc: "Toggle this Shortcuts Guide" },
                 ].map((item, idx) => (

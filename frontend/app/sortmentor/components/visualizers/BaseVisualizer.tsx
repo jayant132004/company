@@ -19,6 +19,7 @@ export interface VisualizerProps {
   battleId?: 1 | 2;
   accentColor?: "indigo" | "pink" | "emerald" | "violet" | "cyan";
   theme?: "Classic" | "Pastel" | "Neon";
+  ghostTrails?: boolean;
 }
 
 export interface VisualizerRef {

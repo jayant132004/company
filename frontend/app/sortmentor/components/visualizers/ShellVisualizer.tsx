@@ -1,12 +1,15 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { VisualizerProps, getNormalizedHeight, getBarColorClass, getNumberFontSizeClass } from "./BaseVisualizer";
+import StepGhostTrails from "./StepGhostTrails";
 
 export default function ShellVisualizer({
   array,
   originalArray,
   steps,
   currentStepIndex,
+  speed,
+  ghostTrails = true,
   zoom,
   battleId
 }: VisualizerProps) {
@@ -72,6 +75,17 @@ export default function ShellVisualizer({
 
         {/* Array Bars Grid */}
         <div className="flex-grow flex items-end justify-between gap-1 sm:gap-2 border-b border-white/5 pb-2 relative min-h-0 select-none px-2 pt-14">
+          {/* Step Ghost Trails & Motion Trajectory Overlay */}
+          <StepGhostTrails
+            array={array}
+            originalArray={originalArray}
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            speed={speed}
+            enabled={ghostTrails}
+            accentColor={accentColor as any}
+          />
+
           {array.map((val, idx) => {
             const heightVal = getNormalizedHeight(val, originalArray);
             
