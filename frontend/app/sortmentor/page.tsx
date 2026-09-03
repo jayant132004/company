@@ -2049,10 +2049,10 @@ function SortMentorContent() {
             setIsShortcutsOpen(false);
           } else if (confirmModal?.isOpen) {
             setConfirmModal(null);
-          } else if (isFullscreen) {
-            setIsFullscreen(false);
           } else if (isChatOpen) {
             setIsChatOpen(false);
+          } else if (isFullscreen) {
+            setIsFullscreen(false);
           }
           break;
       }
@@ -2729,8 +2729,8 @@ ${guide.step1_goal}
       {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden relative">
         <div
-          className={`flex-1 flex flex-col min-w-0 p-3 lg:p-4 gap-3 h-full ${
-            viewMode === "intro" ? "overflow-y-auto" : "overflow-y-auto"
+          className={`flex-1 flex flex-col min-w-0 p-2 sm:p-3 lg:p-4 gap-2 sm:gap-3 h-full ${
+            viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
           }`}
         >
           {/* Top Quick Settings Bar (Collapsible - only in intro mode) */}
@@ -2990,17 +2990,16 @@ ${guide.step1_goal}
           </AnimatePresence>
 
           {/* Unified Visualizer & Side-by-Side Explanation Area */}
-            <div
+          <div
             ref={visualizerCardRef}
-            style={!isFullscreen ? { minHeight: `${dynamicMinHeight}px` } : undefined}
-              className={`flex-1 flex flex-col bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl transition-[min-height] duration-300 ${
-                viewMode === "intro" ? "overflow-y-auto min-h-fit" : "overflow-hidden"
-              } ${
-                isFullscreen
-                  ? "fixed inset-0 z-50 bg-slate-950 p-4"
-                  : "relative min-h-[380px]"
-              }`}
-            >
+            className={`flex-1 flex flex-col bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-2xl transition-all duration-300 min-h-0 ${
+              viewMode === "intro" ? "overflow-y-auto min-h-fit" : "overflow-hidden h-full"
+            } ${
+              isFullscreen
+                ? "fixed inset-0 z-50 bg-slate-950 p-2 sm:p-4"
+                : "relative"
+            }`}
+          >
               {/* Top Toolbar Header (Contains Playback Controls, Telemetry Pills, Timeline & Tools) */}
               {(viewMode === "visualizer" || battleMode) && (
                 <div className="px-4 py-2.5 border-b border-white/5 bg-slate-950/70 backdrop-blur-md flex flex-col gap-2 shrink-0 shadow-lg">
@@ -3398,7 +3397,7 @@ ${guide.step1_goal}
 
               {/* Main Stage: Visualizer (Left) + Integrated Explanation (Right) */}
               <div
-                className={`flex-1 min-h-0 p-2 sm:p-4 flex flex-col ${
+                className={`flex-1 min-h-0 p-2 sm:p-3 flex flex-col ${
                   viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
                 }`}
               >
@@ -3862,9 +3861,9 @@ ${guide.step1_goal}
                   } h-full overflow-hidden`}
                 >
                   {/* Primary Visualizer Card */}
-                  <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-2 sm:p-3 border border-white/5 flex flex-col justify-between overflow-hidden">
+                  <div className="w-full flex-1 min-h-0 bg-slate-950/40 rounded-xl p-2 sm:p-3 border border-white/5 flex flex-col justify-between overflow-hidden">
                     {executionError && (
-                      <div className="mb-2 p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium">
+                      <div className="mb-2 p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium shrink-0">
                         <span className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
                           {executionError}
@@ -3879,10 +3878,7 @@ ${guide.step1_goal}
                     )}
 
                     {/* Canvas Stage */}
-                    <div 
-                      className="flex-1 min-h-[200px] flex flex-col justify-center relative overflow-hidden"
-                      style={activeLayout.hasMultiTier ? { minHeight: `${Math.max(260, activeLayout.minHeight - 140)}px` } : undefined}
-                    >
+                    <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden">
                       <VisualizerFactory
                         array={array}
                         originalArray={originalArray}
@@ -3911,15 +3907,23 @@ ${guide.step1_goal}
                     </div>
 
                     {/* Live State Action Banner */}
-                    <div className="px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/5 shadow-lg flex items-center justify-between gap-3 shrink-0 mt-1.5 select-none">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 shadow-sm shadow-emerald-400/50" />
-                        <span className="text-xs font-mono font-medium text-slate-200 truncate">
+                    <div className="px-3.5 py-2 bg-slate-900/90 backdrop-blur-md rounded-xl border border-white/10 shadow-lg flex items-center justify-between gap-3 shrink-0 mt-2 select-none">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0 shadow-sm shadow-emerald-400/50" />
+                        {steps[currentStepIndex]?.event_type && (
+                          <span className="text-[10px] font-mono font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300 border border-white/10 shrink-0">
+                            {steps[currentStepIndex].event_type}
+                          </span>
+                        )}
+                        <span
+                          className="text-xs sm:text-sm font-mono font-medium text-slate-200 truncate"
+                          title={steps[currentStepIndex]?.message || "Ready. Click Run to start visual execution."}
+                        >
                           {steps[currentStepIndex]?.message || "Ready. Click Run to start visual execution."}
                         </span>
                       </div>
                       {steps.length > 0 && (
-                        <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 shrink-0">
+                        <span className="text-[10px] sm:text-xs font-mono font-bold text-indigo-400 bg-indigo-500/15 px-2.5 py-1 rounded-lg border border-indigo-500/30 shrink-0 shadow-sm">
                           {Math.round(((currentStepIndex + 1) / steps.length) * 100)}% Complete
                         </span>
                       )}
@@ -3928,8 +3932,8 @@ ${guide.step1_goal}
 
                   {/* Battle Arena Visualizer 2 if Battle Mode is Active */}
                   {battleMode && (
-                    <div className="w-full h-full min-h-0 bg-slate-950/40 rounded-xl p-3 border border-pink-500/30 flex flex-col justify-between overflow-hidden">
-                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <div className="w-full flex-1 min-h-0 bg-slate-950/40 rounded-xl p-2 sm:p-3 border border-pink-500/30 flex flex-col justify-between overflow-hidden">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2 shrink-0">
                         <span className="text-xs font-bold text-pink-400 uppercase font-mono">
                           {algorithm2} Sort (Opponent)
                         </span>
@@ -3939,7 +3943,7 @@ ${guide.step1_goal}
                       </div>
 
                       {/* Opponent Live State Variables */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-pink-500/20 font-mono text-[11px] my-2 shrink-0 select-none">
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-pink-500/20 font-mono text-[11px] my-1.5 shrink-0 select-none">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5 shadow-inner">
                             <span className="text-gray-400 text-[10px] uppercase font-bold">Event:</span>
@@ -3974,10 +3978,7 @@ ${guide.step1_goal}
                         </div>
                       </div>
 
-                      <div 
-                        className="flex-1 min-h-[200px] flex flex-col justify-center relative overflow-hidden py-1"
-                        style={activeLayout2?.hasMultiTier ? { minHeight: `${Math.max(260, (activeLayout2?.minHeight || 400) - 140)}px` } : undefined}
-                      >
+                      <div className="flex-1 min-h-0 flex flex-col justify-center relative overflow-hidden py-1">
                         <VisualizerFactory
                           array={
                             steps2[currentStepIndex2]?.array || originalArray
@@ -4007,10 +4008,27 @@ ${guide.step1_goal}
                         />
                       </div>
 
-                      <div className="pt-2 text-center shrink-0 border-t border-white/5 mt-1">
-                        <span className="text-xs text-pink-300 font-mono block truncate">
-                          {steps2[currentStepIndex2]?.message || "Ready."}
-                        </span>
+                      {/* Opponent Live State Action Banner */}
+                      <div className="px-3.5 py-2 bg-slate-900/90 backdrop-blur-md rounded-xl border border-pink-500/20 shadow-lg flex items-center justify-between gap-3 shrink-0 mt-2 select-none">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span className="w-2.5 h-2.5 rounded-full bg-pink-400 animate-pulse shrink-0 shadow-sm shadow-pink-400/50" />
+                          {steps2[currentStepIndex2]?.event_type && (
+                            <span className="text-[10px] font-mono font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-800 text-pink-300 border border-white/10 shrink-0">
+                              {steps2[currentStepIndex2].event_type}
+                            </span>
+                          )}
+                          <span
+                            className="text-xs sm:text-sm font-mono font-medium text-pink-200 truncate"
+                            title={steps2[currentStepIndex2]?.message || "Ready."}
+                          >
+                            {steps2[currentStepIndex2]?.message || "Ready."}
+                          </span>
+                        </div>
+                        {steps2.length > 0 && (
+                          <span className="text-[10px] sm:text-xs font-mono font-bold text-pink-400 bg-pink-500/15 px-2.5 py-1 rounded-lg border border-pink-500/30 shrink-0 shadow-sm">
+                            {Math.round(((currentStepIndex2 + 1) / steps2.length) * 100)}% Complete
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -4022,13 +4040,15 @@ ${guide.step1_goal}
 
         {/* AI Tutor Chat Drawer (Slide-out) */}
         <AnimatePresence>
-          {isChatOpen && !isFullscreen && (
+          {isChatOpen && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: chatWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ type: "spring", stiffness: 350, damping: 30 }}
-              className="bg-slate-900/60 backdrop-blur-md border-l border-white/5 flex flex-col h-full shrink-0 relative overflow-hidden"
+              className={`bg-slate-900/90 backdrop-blur-md border-l border-white/10 flex flex-col h-full shrink-0 relative overflow-hidden ${
+                isFullscreen ? "fixed right-0 top-0 bottom-0 z-[60] shadow-2xl bg-slate-950/95" : ""
+              }`}
               style={{ width: `min(100%, ${chatWidth}px)` }}
             >
               <div
@@ -4313,7 +4333,9 @@ ${guide.step1_goal}
           <button
             onClick={() => setIsChatOpen(true)}
             aria-label="Open AI Tutor Chat Drawer"
-            className="absolute right-4 bottom-4 p-3.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/40 z-10 transition-all cursor-pointer ring-2 ring-indigo-400/30"
+            className={`p-3.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:shadow-indigo-600/40 transition-all cursor-pointer ring-2 ring-indigo-400/30 ${
+              isFullscreen ? "fixed right-4 bottom-4 z-50" : "absolute right-4 bottom-4 z-10"
+            }`}
             title="Open AI Tutor (Ask anything)"
           >
             <BrainCircuit className="h-5 w-5" />
