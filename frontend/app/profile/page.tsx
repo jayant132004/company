@@ -37,7 +37,7 @@ export default function ProfilePage() {
   // Fetch Profile data from Firestore
   useEffect(() => {
     if (!user && !authLoading) {
-      router.push("/");
+      router.push("/login?redirect=/profile");
       return;
     }
 

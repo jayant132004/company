@@ -1776,11 +1776,7 @@ function SortMentorContent() {
     }
   }, [createEmptyChat]);
 
-  useEffect(() => {
-    if (!user && !authLoading) {
-      router.push("/");
-    }
-  }, [user, authLoading, router]);
+
 
   useEffect(() => {
     generateNewArray();

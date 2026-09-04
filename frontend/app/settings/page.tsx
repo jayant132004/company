@@ -43,7 +43,7 @@ export default function SettingsPage() {
   // Fetch settings from Firestore
   useEffect(() => {
     if (!user && !authLoading) {
-      router.push("/");
+      router.push("/login?redirect=/settings");
       return;
     }
 
@@ -189,7 +189,7 @@ export default function SettingsPage() {
         }
         localStorage.clear();
         await logout();
-        router.push("/");
+        router.push("/dashboard");
       },
     });
   };
