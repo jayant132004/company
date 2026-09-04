@@ -24,7 +24,20 @@ export default function UserDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <button
+        onClick={() => {
+          const currentUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/dashboard";
+          router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+        }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-600/20 hover:bg-indigo-600 hover:border-indigo-500 text-indigo-200 hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
+      >
+        <UserIcon className="h-3.5 w-3.5" />
+        <span>Sign In</span>
+      </button>
+    );
+  }
 
   const displayName = profile?.displayName || user.displayName || "AlgoVerse Student";
   const email = user.email || "";

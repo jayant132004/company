@@ -5,11 +5,11 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const { pathname } = request.nextUrl;
 
-  // Paths requiring user authentication
-  const protectedRoutes = ["/dashboard", "/sortmentor", "/interview", "/challenges"];
+  // Paths requiring user authentication (private user data)
+  const protectedRoutes = ["/profile", "/settings"];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
-  // Redirect unauthenticated requests to login
+  // Redirect unauthenticated requests on protected routes to login
   if (isProtectedRoute && !token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
@@ -26,10 +26,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/sortmentor/:path*",
-    "/interview/:path*",
-    "/challenges/:path*",
+    "/profile/:path*",
+    "/settings/:path*",
     "/login"
   ]
 };

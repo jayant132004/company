@@ -154,12 +154,27 @@ export default function Home() {
               </svg>
               <span>Continue with GitHub</span>
             </button>
+
+            {/* Public Guest Explore Button */}
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-white/10"></div>
+              <span className="flex-shrink mx-2 text-[10px] text-gray-500 uppercase tracking-widest font-bold">Or Explore</span>
+              <div className="flex-grow border-t border-white/10"></div>
+            </div>
+
+            <button
+              onClick={() => router.push("/sortmentor")}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-600/20 hover:bg-indigo-600/30 hover:border-indigo-400 text-indigo-200 hover:text-white transition-all text-xs font-bold cursor-pointer shadow-sm"
+            >
+              <Zap className="h-4 w-4 text-indigo-400" />
+              <span>Launch SortMentor (Guest Mode)</span>
+            </button>
           </div>
 
-          <div className="text-center pt-2">
+          <div className="text-center pt-1">
             <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold flex items-center justify-center gap-1.5">
               <Terminal className="h-3 w-3" />
-              Secured by Firebase Auth
+              Public Visualizer • Login for AI Tutor
             </span>
           </div>
         </motion.div>

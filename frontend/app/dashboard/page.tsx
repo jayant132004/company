@@ -296,11 +296,7 @@ export default function DashboardPage() {
   const [isPreviewSorting, setIsPreviewSorting] = useState<boolean>(false);
   const [isPreviewSorted, setIsPreviewSorted] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (!user && !loading) {
-      router.push("/");
-    }
-  }, [user, loading, router]);
+
 
   // Client-side filtering of algorithms with clean taxonomy
   const filteredAlgos = useMemo(() => {
@@ -393,7 +389,7 @@ export default function DashboardPage() {
     setIsPreviewSorting(false);
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[#030712]">
         <div className="flex flex-col items-center gap-4">

@@ -56,9 +56,13 @@ import {
   Check,
   Info,
   Activity,
+  Lock,
+  LogIn,
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
+import GoogleLoginButton from "../../components/auth/GoogleLoginButton";
+import GitHubLoginButton from "../../components/auth/GitHubLoginButton";
 import VisualizerFactory from "./components/visualizers/VisualizerFactory";
 import { ALGO_LAYOUTS, getAlgorithmLayout } from "./components/visualizers/BaseVisualizer";
 
@@ -2099,6 +2103,10 @@ function SortMentorContent() {
   };
 
   const askAITutor = async () => {
+    if (!user) {
+      setIsChatOpen(true);
+      return;
+    }
     if (!tutorMessage.trim()) return;
 
     const userQuery = tutorMessage;
@@ -2276,10 +2284,13 @@ ${guide.step1_goal}
   };
 
   const explainCurrentStep = async () => {
+    setIsChatOpen(true);
+    if (!user) {
+      return;
+    }
     const activeStep = steps[currentStepIndex];
     if (!activeStep) return;
 
-    setIsChatOpen(true);
     setIsTutorThinking(true);
     try {
       const requestHeaders: Record<string, string> = {
@@ -4065,37 +4076,46 @@ ${guide.step1_goal}
                     <span className="font-bold text-xs text-white">
                       SortMentor Tutor
                     </span>
+                    {!user && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono flex items-center gap-1">
+                        <Lock className="h-2.5 w-2.5" /> Sign-in Required
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        createEmptyChat();
-                        setChatDrawerTab("chat");
-                      }}
-                      aria-label="Create new chat session"
-                      className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
-                      title="New Chat Session"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                    {chatDrawerTab === "chat" && (
+                    {user && (
                       <>
                         <button
-                          onClick={exportChat}
-                          aria-label="Export conversation"
+                          onClick={() => {
+                            createEmptyChat();
+                            setChatDrawerTab("chat");
+                          }}
+                          aria-label="Create new chat session"
                           className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
-                          title="Export Conversation"
+                          title="New Chat Session"
                         >
-                          <Download className="h-3.5 w-3.5" />
+                          <Plus className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={promptClearChat}
-                          aria-label="Clear chat messages"
-                          className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-rose-400 transition-colors cursor-pointer"
-                          title="Clear Messages"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {chatDrawerTab === "chat" && (
+                          <>
+                            <button
+                              onClick={exportChat}
+                              aria-label="Export conversation"
+                              className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
+                              title="Export Conversation"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={promptClearChat}
+                              aria-label="Clear chat messages"
+                              className="p-1 hover:bg-slate-800 rounded-lg text-gray-400 hover:text-rose-400 transition-colors cursor-pointer"
+                              title="Clear Messages"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                     <button
@@ -4108,33 +4128,35 @@ ${guide.step1_goal}
                   </div>
                 </div>
 
-                {/* View Switcher Tabs: Active Chat vs Sessions History */}
-                <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-950 rounded-xl border border-white/5 text-xs font-mono">
-                  <button
-                    onClick={() => setChatDrawerTab("chat")}
-                    className={`py-1 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      chatDrawerTab === "chat"
-                        ? "bg-indigo-600 text-white shadow"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    <span>Active Chat</span>
-                  </button>
-                  <button
-                    onClick={() => setChatDrawerTab("sessions")}
-                    className={`py-1 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      chatDrawerTab === "sessions"
-                        ? "bg-indigo-600 text-white shadow"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <History className="h-3 w-3" />
-                    <span>Sessions ({conversations.length})</span>
-                  </button>
-                </div>
+                {/* View Switcher Tabs: Active Chat vs Sessions History (Only when logged in) */}
+                {user && (
+                  <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-950 rounded-xl border border-white/5 text-xs font-mono">
+                    <button
+                      onClick={() => setChatDrawerTab("chat")}
+                      className={`py-1 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        chatDrawerTab === "chat"
+                          ? "bg-indigo-600 text-white shadow"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      <span>Active Chat</span>
+                    </button>
+                    <button
+                      onClick={() => setChatDrawerTab("sessions")}
+                      className={`py-1 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        chatDrawerTab === "sessions"
+                          ? "bg-indigo-600 text-white shadow"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <History className="h-3 w-3" />
+                      <span>Sessions ({conversations.length})</span>
+                    </button>
+                  </div>
+                )}
 
-                {chatDrawerTab === "sessions" && (
+                {user && chatDrawerTab === "sessions" && (
                   <div className="relative">
                     <input
                       type="text"
@@ -4148,8 +4170,57 @@ ${guide.step1_goal}
                 )}
               </div>
 
-              {/* Sessions List View */}
-              {chatDrawerTab === "sessions" ? (
+              {/* Chat Content: Guest Lock Screen VS Authenticated Chat Feeds */}
+              {!user ? (
+                <div className="flex-1 p-5 overflow-y-auto flex flex-col items-center justify-center text-center gap-4">
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-500/30 bg-indigo-950/40 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                    <BrainCircuit className="h-7 w-7" />
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-slate-950 font-bold shadow">
+                      <Lock className="h-2.5 w-2.5" />
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <h3 className="text-base font-extrabold text-white">
+                      Sign In to Unlock AI Tutor
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed max-w-[280px]">
+                      Get real-time explanations of comparisons, swaps, and algorithmic invariants as you step through code.
+                    </p>
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 text-left bg-slate-950/60 border border-white/5 rounded-xl p-3 text-xs font-mono">
+                    <div className="flex items-center gap-2 text-indigo-300">
+                      <Zap className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                      <span className="text-[11px] font-sans">Live step-by-step state grounding</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-pink-300">
+                      <Sparkle className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+                      <span className="text-[11px] font-sans">In-depth invariant & complexity Q&A</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-emerald-300">
+                      <History className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-[11px] font-sans">Multi-session saved chat history</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2.5 pt-1">
+                    <GoogleLoginButton />
+                    <GitHubLoginButton />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const currentUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/sortmentor";
+                      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+                    }}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer pt-1"
+                  >
+                    Go to dedicated login portal →
+                  </button>
+                </div>
+              ) : chatDrawerTab === "sessions" ? (
+                /* Sessions List View */
                 <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-2">
                   {filteredConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-48 text-center gap-2 text-slate-500 text-xs font-mono">
@@ -4302,8 +4373,25 @@ ${guide.step1_goal}
                 </div>
               )}
 
-              {/* Chat Input */}
-              {chatDrawerTab === "chat" && (
+              {/* Chat Input / Guest Sign In Bar */}
+              {!user ? (
+                <div className="p-3 border-t border-white/5 bg-slate-950/70 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Lock className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Sign in to ask questions</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const currentUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/sortmentor";
+                      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
+                  >
+                    <LogIn className="h-3.5 w-3.5" />
+                    <span>Sign In</span>
+                  </button>
+                </div>
+              ) : chatDrawerTab === "chat" ? (
                 <div className="p-3 border-t border-white/5 bg-slate-950/40">
                   <div className="flex gap-1.5">
                     <input
@@ -4323,7 +4411,7 @@ ${guide.step1_goal}
                     </button>
                   </div>
                 </div>
-              )}
+              ) : null}
             </motion.div>
           )}
         </AnimatePresence>
