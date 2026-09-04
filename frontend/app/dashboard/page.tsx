@@ -400,8 +400,17 @@ export default function DashboardPage() {
     );
   }
 
-  const navigateToVisualizer = (algoId: string) => {
-    router.push(`/sortmentor?algorithm=${algoId}`);
+  const navigateToVisualizer = (algoId?: string, mode?: string) => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (typeof document !== "undefined") {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+    const params = new URLSearchParams();
+    if (algoId) params.set("algorithm", algoId);
+    if (mode) params.set("mode", mode);
+    const queryString = params.toString();
+    router.push(queryString ? `/sortmentor?${queryString}` : "/sortmentor");
   };
 
   return (
@@ -489,7 +498,7 @@ export default function DashboardPage() {
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button 
-                onClick={() => router.push("/sortmentor")}
+                onClick={() => navigateToVisualizer()}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-white/10 hover:border-white/20 font-semibold text-sm transition-all text-white cursor-pointer"
               >
                 Launch SortMentor Workspace →
@@ -549,7 +558,7 @@ export default function DashboardPage() {
               Browse Library ↓
             </button>
             <button 
-              onClick={() => router.push("/sortmentor")}
+              onClick={() => navigateToVisualizer()}
               className="px-4 py-2 text-xs font-bold text-pink-400 bg-pink-500/5 hover:bg-pink-500/10 border border-pink-500/20 rounded-lg cursor-pointer"
             >
               Launch SortMentor Workspace →
@@ -676,7 +685,7 @@ export default function DashboardPage() {
 
                 <div className="flex gap-3 mt-auto border-t border-white/5 pt-3">
                   <button 
-                    onClick={() => router.push(`/sortmentor?algorithm=${algo.id}&mode=intro`)}
+                    onClick={() => navigateToVisualizer(algo.id, "intro")}
                     className="flex-1 px-3 py-1.5 rounded-lg border border-white/10 hover:border-indigo-500/30 text-xs font-semibold text-center text-gray-300 hover:text-white bg-slate-900/60 transition-all cursor-pointer"
                     title={`Open 3-Step Guided Theory for ${algo.name}`}
                   >
@@ -957,7 +966,7 @@ export default function DashboardPage() {
 
             <div className="mt-2 pt-3 border-t border-white/5">
               <button
-                onClick={() => router.push(`/sortmentor?algorithm=${previewAlgorithm}`)}
+                onClick={() => navigateToVisualizer(previewAlgorithm)}
                 className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-bold text-xs transition-all cursor-pointer"
               >
                 Launch Full Simulation in SortMentor Workspace →
@@ -1081,7 +1090,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/sortmentor")}
+            onClick={() => navigateToVisualizer()}
             className="px-5 py-2.5 rounded-lg border border-indigo-500/20 hover:border-indigo-500/40 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 font-bold text-xs transition-all cursor-pointer self-stretch md:self-auto text-center"
           >
             Ask SortMentor AI →

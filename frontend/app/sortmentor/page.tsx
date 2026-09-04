@@ -1545,6 +1545,7 @@ function SortMentorContent() {
   const [introTab, setIntroTab] = useState<"process" | "visualizer_guide" | "complexity" | "code">("process");
   const [isConfigCollapsed, setIsConfigCollapsed] = useState<boolean>(true);
   const visualizerCardRef = useRef<HTMLDivElement>(null);
+  const mainWorkspaceRef = useRef<HTMLDivElement>(null);
   const [hoveredStepIdx, setHoveredStepIdx] = useState<number | null>(null);
   const [tooltipX, setTooltipX] = useState<number>(0);
 
@@ -1770,13 +1771,20 @@ function SortMentorContent() {
         } catch {
           createEmptyChat();
         }
-      } else {
-        createEmptyChat();
       }
     }
   }, [createEmptyChat]);
 
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (typeof document !== "undefined") {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+    if (mainWorkspaceRef.current) {
+      mainWorkspaceRef.current.scrollTop = 0;
+    }
+  }, [algorithm, viewMode, algoParam]);
 
   useEffect(() => {
     generateNewArray();
@@ -2687,7 +2695,14 @@ ${guide.step1_goal}
       >
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              if (typeof document !== "undefined") {
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+              }
+              router.push("/dashboard");
+            }}
             className="p-1.5 rounded-lg hover:bg-slate-800 border border-transparent hover:border-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -2736,6 +2751,7 @@ ${guide.step1_goal}
       {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden relative">
         <div
+          ref={mainWorkspaceRef}
           className={`flex-1 flex flex-col min-w-0 p-2 sm:p-3 lg:p-4 gap-2 sm:gap-3 h-full ${
             viewMode === "intro" ? "overflow-y-auto" : "overflow-hidden"
           }`}

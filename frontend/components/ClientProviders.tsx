@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "../context/useAuthStore";
 
+import ScrollToTop from "./ScrollToTop";
+import { Suspense } from "react";
+
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
@@ -49,6 +52,9 @@ export default function ClientProviders({ children }: { children: React.ReactNod
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Suspense fallback={null}>
+        <ScrollToTop />
+      </Suspense>
       {loading ? (
         <div className="flex h-screen w-screen items-center justify-center bg-[#030712]">
           <div className="flex flex-col items-center gap-4">
