@@ -1,14 +1,22 @@
 import React from "react";
 
 export default function JsonLd() {
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://algoverse-flame.vercel.app");
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebApplication",
-        "@id": "https://algoverse.io/#webapp",
+        "@id": `${siteUrl}/#webapp`,
         "name": "AlgoVerse & SortMentor",
-        "url": "https://algoverse.io",
+        "url": siteUrl,
         "applicationCategory": "EducationalApplication",
         "operatingSystem": "All",
         "browserRequirements": "Requires JavaScript. Requires HTML5.",
@@ -36,17 +44,17 @@ export default function JsonLd() {
       },
       {
         "@type": "EducationalOrganization",
-        "@id": "https://algoverse.io/#organization",
+        "@id": `${siteUrl}/#organization`,
         "name": "AlgoVerse",
-        "url": "https://algoverse.io",
-        "logo": "https://algoverse.io/icon.png",
+        "url": siteUrl,
+        "logo": `${siteUrl}/logo-icon.png`,
         "sameAs": [
           "https://github.com/jayant132004/company",
         ],
       },
       {
         "@type": "LearningResource",
-        "@id": "https://algoverse.io/sortmentor#resource",
+        "@id": `${siteUrl}/sortmentor#resource`,
         "name": "SortMentor Interactive Sorting Masterclass",
         "description":
           "Visual, step-by-step masterclass covering comparison and non-comparison sorting algorithms, invariants, pseudocode, and asymptotic complexities.",
@@ -68,7 +76,7 @@ export default function JsonLd() {
       },
       {
         "@type": "FAQPage",
-        "@id": "https://algoverse.io/#faq",
+        "@id": `${siteUrl}/#faq`,
         "mainEntity": [
           {
             "@type": "Question",
@@ -115,19 +123,19 @@ export default function JsonLd() {
             "@type": "ListItem",
             "position": 1,
             "name": "Home",
-            "item": "https://algoverse.io",
+            "item": `${siteUrl}/`,
           },
           {
             "@type": "ListItem",
             "position": 2,
             "name": "Dashboard",
-            "item": "https://algoverse.io/dashboard",
+            "item": `${siteUrl}/dashboard`,
           },
           {
             "@type": "ListItem",
             "position": 3,
             "name": "SortMentor Studio",
-            "item": "https://algoverse.io/sortmentor",
+            "item": `${siteUrl}/sortmentor`,
           },
         ],
       },

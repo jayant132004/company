@@ -22,8 +22,16 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://algoverse-flame.vercel.app");
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://algoverse.io"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "AlgoVerse — Interactive DSA Visualizer & Next-Gen AI Tutor",
     template: "%s | AlgoVerse",
@@ -31,25 +39,13 @@ export const metadata: Metadata = {
   description:
     "Master Data Structures & Algorithms with real-time interactive sorting visualizers (Quick, Merge, Heap, TimSort, Radix), step ghost trails, RAG-powered AI tutoring, and competitive coding simulations.",
   keywords: [
-    "data structures algorithms",
+    "data structures and algorithms",
     "sorting algorithm visualizer",
     "interactive DSA visualizer",
-    "quicksort visualizer",
-    "mergesort divide and conquer tree",
-    "timsort visualizer",
-    "heap sort binary tree",
-    "radix sort visualizer",
-    "counting sort visualizer",
-    "bucket sort simulation",
-    "AI computer science tutor",
-    "DSA learning roadmap",
-    "step ghost trails visualizer",
-    "algorithm time complexity",
-    "coding interview preparation",
-    "leetcode visualizer",
-    "computer science education",
+    "SortMentor AI tutor",
+    "AlgoVerse",
   ],
-  authors: [{ name: "AlgoVerse Team", url: "https://algoverse.io" }],
+  authors: [{ name: "AlgoVerse Team", url: siteUrl }],
   creator: "AlgoVerse",
   publisher: "AlgoVerse",
   formatDetection: {
@@ -58,19 +54,19 @@ export const metadata: Metadata = {
     telephone: false,
   },
   alternates: {
-    canonical: "https://algoverse.io",
+    canonical: siteUrl,
   },
   openGraph: {
     title: "AlgoVerse — Interactive DSA Visualizer & AI Tutor",
     description:
       "Interactive DSA visualizer featuring 11 specialized algorithm topologies, step ghost trails, battle arena benchmarks, and real-time AI tutor grounding.",
-    url: "https://algoverse.io",
+    url: siteUrl,
     siteName: "AlgoVerse",
     locale: "en_US",
     type: "website",
     images: [
       {
-        url: "https://algoverse.io/og-image.png",
+        url: `${siteUrl}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "AlgoVerse Interactive Algorithm Visualizer & AI Tutor",
@@ -83,7 +79,7 @@ export const metadata: Metadata = {
     description:
       "Master computer science algorithms visually with 11 custom visualizers and instant AI tutoring.",
     creator: "@algoverse",
-    images: ["https://algoverse.io/og-image.png"],
+    images: [`${siteUrl}/og-image.png`],
   },
   robots: {
     index: true,
