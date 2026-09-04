@@ -96,6 +96,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    google: "google50ef3dbf2b4a590e",
+  },
   category: "education",
 };
 
