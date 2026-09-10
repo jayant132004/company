@@ -28,6 +28,9 @@ import {
   Play,
   Calculator,
   ArrowLeft,
+  Globe,
+  Building2,
+  Download,
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
@@ -271,6 +274,85 @@ const FAQS = [
   {
     q: "How does visualizing algorithms help score higher in GATE NAT and MSQ questions?",
     a: "GATE NAT questions frequently ask for the exact number of comparisons, swaps, or tree heights on concrete array examples (e.g. finding inversions or Lomuto partition steps). Visualizing these step-by-step in SortMentor builds concrete geometric intuition so you don't make off-by-one errors under exam pressure.",
+  },
+];
+
+interface GateResourceLink {
+  title: string;
+  category: "Official Portal" | "Syllabus" | "Academic Lecture" | "PYQ Archive";
+  url: string;
+  authority: string;
+  desc: string;
+  tag: string;
+  isPdf?: boolean;
+}
+
+const OFFICIAL_GATE_RESOURCES: GateResourceLink[] = [
+  {
+    title: "GATE Official Examination Portal",
+    category: "Official Portal",
+    url: "https://gate2025.iitr.ac.in/",
+    authority: "Organizing IITs (IIT Roorkee / IISc Bangalore)",
+    desc: "National examination portal for application notifications, exam schedules, official announcements, scorecards, and admission counseling.",
+    tag: "Primary Authority",
+  },
+  {
+    title: "Official GATE Computer Science (CS) Syllabus PDF",
+    category: "Syllabus",
+    url: "https://gate2025.iitr.ac.in/doc/syllabus/CS.pdf",
+    authority: "Ministry of Education & National GATE Committee",
+    desc: "Official curriculum detailing Section 3 (Data Structures & Algorithms): Asymptotic complexity, worst and average case analysis, sorting algorithms, priority queues, and hashing.",
+    tag: "Official CS PDF",
+    isPdf: true,
+  },
+  {
+    title: "Official GATE Data Science & AI (DA) Syllabus PDF",
+    category: "Syllabus",
+    url: "https://gate2025.iitr.ac.in/doc/syllabus/DA.pdf",
+    authority: "National GATE Committee (IITs & IISc)",
+    desc: "Official syllabus for the dedicated DA paper detailing Algorithms: Search algorithms, sorting algorithms (comparison and non-comparison), divide-and-conquer, and graph traversals.",
+    tag: "Official DA PDF",
+    isPdf: true,
+  },
+  {
+    title: "Official Master Question Papers & Answer Keys Repository",
+    category: "PYQ Archive",
+    url: "https://gate2025.iitr.ac.in/download-question-papers.html",
+    authority: "National GATE Organizing Committee",
+    desc: "Official archive containing master question papers with official verified answer keys from 2010 to 2025 across all examination sessions.",
+    tag: "Verified Keys",
+  },
+  {
+    title: "NPTEL Design and Analysis of Algorithms (IIT Madras)",
+    category: "Academic Lecture",
+    url: "https://nptel.ac.in/courses/106106131",
+    authority: "Prof. Madhavan Mukund (IIT Madras / CMI)",
+    desc: "Premier government-funded university lecture series covering divide-and-conquer recurrences, Master's theorem proofs, decision tree lower bounds, and sorting.",
+    tag: "Top Faculty",
+  },
+  {
+    title: "GATE Overflow Verified Sorting & Algorithms Archive",
+    category: "PYQ Archive",
+    url: "https://gateoverflow.in/tag/sorting",
+    authority: "GATE Overflow Peer-Review Community",
+    desc: "Detailed peer-reviewed community solutions, edge-case derivations, and multiple solution approaches for every sorting question asked in GATE since 1987.",
+    tag: "PYQ Community",
+  },
+  {
+    title: "MIT OpenCourseWare 6.006: Introduction to Algorithms",
+    category: "Academic Lecture",
+    url: "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/",
+    authority: "MIT EECS Department",
+    desc: "World-benchmark university lectures covering comparison-based sorting bounds Ω(n log n), Binary Heaps, and linear-time counting/radix sorts.",
+    tag: "Global Benchmark",
+  },
+  {
+    title: "GeeksforGeeks GATE CS Algorithms Subject Notes",
+    category: "Academic Lecture",
+    url: "https://www.geeksforgeeks.org/gate-cs-notes-gq/",
+    authority: "GeeksforGeeks DAA Portal",
+    desc: "Topic-by-topic structured notes, quick complexity comparison charts, and practice multiple-choice questions categorized by GATE syllabus modules.",
+    tag: "Quick Revision",
   },
 ];
 
@@ -723,7 +805,69 @@ export default function GateGuidePage() {
           </div>
         </section>
 
-        {/* 8. INTERACTIVE CTA SECTION */}
+        {/* 8. OFFICIAL GATE PORTALS, SYLLABI & REPOSITORIES */}
+        <section className="flex flex-col gap-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                <Globe className="h-5 w-5 text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white tracking-tight">
+                  Official GATE Portals, Syllabi & Authoritative Repositories
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Direct links to organizing IITs, official syllabus PDFs, NPTEL master lectures, and verified PYQ archives.
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-mono px-3 py-1 rounded bg-slate-900 border border-white/10 text-emerald-400 flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5" /> Official IIT & Government Sources
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {OFFICIAL_GATE_RESOURCES.map((res, idx) => (
+              <a
+                key={idx}
+                href={res.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group p-5 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-indigo-500/40 hover:bg-slate-900/40 transition-all flex flex-col justify-between gap-4"
+              >
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      {res.category}
+                    </span>
+                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-white/5 text-gray-400 group-hover:text-indigo-300 transition-colors flex items-center gap-1">
+                      {res.isPdf ? <Download className="h-3 w-3 text-pink-400" /> : <ExternalLink className="h-3 w-3" />}
+                      {res.tag}
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-indigo-300 transition-colors flex items-center gap-1.5">
+                    <span>{res.title}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-indigo-400" />
+                  </h3>
+
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    {res.desc}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] text-gray-500 font-mono">
+                  <span>{res.authority}</span>
+                  <span className="text-indigo-400 font-semibold group-hover:underline flex items-center gap-1">
+                    Visit Resource &rarr;
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* 9. INTERACTIVE CTA SECTION */}
         <section className="glass-panel p-8 md:p-10 rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-950/60 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
           <div className="flex flex-col gap-3 max-w-xl text-left">
             <span className="text-xs font-mono font-bold uppercase tracking-widest text-indigo-400 flex items-center gap-1.5">
