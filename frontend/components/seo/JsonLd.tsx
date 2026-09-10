@@ -117,6 +117,26 @@ export default function JsonLd() {
         ],
       },
       {
+        "@type": "TechArticle",
+        "@id": `${siteUrl}/gate-exam-sorting-algorithms#article`,
+        "headline": "Importance of Sorting Algorithms in GATE CS Exam: Weightage, Syllabus & PYQs",
+        "description": "Comprehensive guide for GATE Computer Science and Data Science aspirants covering 10-year exam weightage, decision tree bounds, stability, and solved PYQs.",
+        "author": {
+          "@type": "Organization",
+          "name": "AlgoVerse"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "AlgoVerse",
+          "logo": {
+            "@type": "ImageObject",
+            "url": `${siteUrl}/logo-icon.png`
+          }
+        },
+        "url": `${siteUrl}/gate-exam-sorting-algorithms`,
+        "mainEntityOfPage": `${siteUrl}/gate-exam-sorting-algorithms`
+      },
+      {
         "@type": "BreadcrumbList",
         "itemListElement": [
           {
@@ -136,6 +156,12 @@ export default function JsonLd() {
             "position": 3,
             "name": "SortMentor Studio",
             "item": `${siteUrl}/sortmentor`,
+          },
+          {
+            "@type": "ListItem",
+            "position": 4,
+            "name": "GATE Sorting Guide",
+            "item": `${siteUrl}/gate-exam-sorting-algorithms`,
           },
         ],
       },

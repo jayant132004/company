@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../../context/useAuthStore";
@@ -8,7 +9,7 @@ import {
   BrainCircuit, ArrowRight, Lock, SlidersHorizontal, Sparkles, 
   Code, ChevronRight, ArrowUpRight, CheckCircle2, HelpCircle, 
   Info, Terminal, BookOpen, Loader2, Play, RotateCcw, Activity,
-  ArrowUpDown, ArrowUp, ArrowDown, Layers, X
+  ArrowUpDown, ArrowUp, ArrowDown, Layers, X, GraduationCap
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
@@ -431,6 +432,16 @@ export default function DashboardPage() {
 
           <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
             <span className="text-white border-b-2 border-indigo-500 pb-1 cursor-default">Sorting</span>
+            <Link
+              href="/gate-exam-sorting-algorithms"
+              className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors font-semibold"
+            >
+              <GraduationCap className="h-4 w-4" />
+              <span>GATE Guide</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono">
+                New
+              </span>
+            </Link>
             <button
               onClick={() => showLockedFeedback("Searching")}
               className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1076,6 +1087,26 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* GATE EXAM PREPARATION GUIDE BANNER */}
+        <section className="glass-panel p-6 sm:p-8 rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-950/40 via-slate-950/60 to-purple-950/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex flex-col gap-2.5">
+            <span className="text-[10px] font-mono tracking-widest text-indigo-400 font-bold uppercase flex items-center gap-1.5">
+              <GraduationCap className="h-3.5 w-3.5 text-indigo-400" /> GATE CS & DA Examination Guide
+            </span>
+            <h3 className="text-xl font-bold text-white">Importance of Sorting Algorithms in GATE</h3>
+            <p className="text-xs text-gray-300 leading-relaxed max-w-2xl">
+              Understand 10-year exam weightage (4–8 marks), decision tree lower bounds &Omega;(n log n), recurrence relations, and practice 5 solved GATE PYQs with step-by-step mathematical proofs.
+            </p>
+          </div>
+          <Link
+            href="/gate-exam-sorting-algorithms"
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20 self-stretch md:self-auto text-center shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>Read GATE Master Guide</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </section>
 
         {/* 11. AI-POWERED LEARNING */}

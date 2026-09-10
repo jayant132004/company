@@ -2743,6 +2743,21 @@ ${guide.step1_goal}
             <span>{battleMode ? "Battle Arena Active" : "Battle Arena"}</span>
             <span className={`w-2 h-2 rounded-full ${battleMode ? "bg-pink-400 shadow-sm shadow-pink-400 animate-pulse" : "bg-gray-600"}`} />
           </button>
+          <button
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              if (typeof document !== "undefined") {
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+              }
+              router.push("/gate-exam-sorting-algorithms");
+            }}
+            aria-label="View GATE Exam Sorting Algorithms Guide & PYQs"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer bg-slate-900/80 border border-white/10 hover:border-indigo-500/30 text-indigo-400 hover:text-indigo-300"
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            <span>GATE Guide</span>
+          </button>
           <ShareButton />
           <UserDropdown />
         </div>
