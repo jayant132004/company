@@ -57,6 +57,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.95,
     },
+    {
+      url: `${siteUrl}/searchmentor`,
+      lastModified: currentDate,
+      changeFrequency: "daily",
+      priority: 1.0,
+    },
   ];
 
   // Specific Algorithm deep-links for Google indexing

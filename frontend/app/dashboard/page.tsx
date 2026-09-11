@@ -9,7 +9,7 @@ import {
   BrainCircuit, ArrowRight, Lock, SlidersHorizontal, Sparkles, 
   Code, ChevronRight, ArrowUpRight, CheckCircle2, HelpCircle, 
   Info, Terminal, BookOpen, Loader2, Play, RotateCcw, Activity,
-  ArrowUpDown, ArrowUp, ArrowDown, Layers, X, GraduationCap
+  ArrowUpDown, ArrowUp, ArrowDown, Layers, X, GraduationCap, Search
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
@@ -442,15 +442,16 @@ export default function DashboardPage() {
                 New
               </span>
             </Link>
-            <button
-              onClick={() => showLockedFeedback("Searching")}
-              className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+            <Link
+              href="/searchmentor"
+              className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors font-semibold"
             >
+              <Search className="h-4 w-4" />
               <span>Searching</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-gray-400 font-mono flex items-center gap-1">
-                <Lock className="h-2.5 w-2.5 text-gray-500" /> Soon
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono">
+                Live
               </span>
-            </button>
+            </Link>
             <button
               onClick={() => showLockedFeedback("Trees")}
               className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1137,21 +1138,30 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative before:hidden lg:before:block lg:before:absolute lg:before:left-0 lg:before:right-0 lg:before:top-1/4 lg:before:h-[2px] lg:before:bg-white/5">
             {[
-              { stage: "Current", title: "Sorting Algorithms", desc: "Interactive visualization, AI explanations, algorithm comparison, and custom datasets.", active: true },
-              { stage: "Next", title: "Searching Algorithms", desc: "Explore Binary Search, Jump Search, Interpolation Search, and Exponential Search.", active: false },
+              { stage: "Live", title: "Sorting Algorithms", desc: "Interactive visualization, AI explanations, algorithm comparison, and custom datasets.", active: true, link: "/sortmentor" },
+              { stage: "Live", title: "Searching Algorithms", desc: "Explore Binary Search, Jump Search, Interpolation Search, Exponential Search, and Two Pointers.", active: true, link: "/searchmentor" },
               { stage: "Coming Soon", title: "Trees & Graphs", desc: "Binary Search Trees, AVL balance, Graph DFS/BFS traversals, Dijkstra routing.", active: false },
               { stage: "Future", title: "Advanced Modules", desc: "Dynamic Programming, Greedy algorithms, Backtracking, Operating Systems.", active: false }
             ].map((r, idx) => (
-              <div key={idx} className="p-5 rounded-xl bg-slate-900/40 border border-white/5 flex flex-col gap-3 relative z-10">
-                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded self-start ${
-                  r.active ? "bg-indigo-500/20 text-indigo-400" : "bg-white/5 text-gray-500"
-                }`}>
-                  {r.stage}
-                </span>
-                <div className="flex flex-col">
+              <div key={idx} className="p-5 rounded-xl bg-slate-900/40 border border-white/5 flex flex-col justify-between gap-3 relative z-10">
+                <div className="flex flex-col gap-2">
+                  <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded self-start ${
+                    r.active ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-white/5 text-gray-500"
+                  }`}>
+                    {r.stage}
+                  </span>
                   <h4 className="text-sm font-bold text-white">{r.title}</h4>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">{r.desc}</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">{r.desc}</p>
                 </div>
+                {r.link && (
+                  <Link
+                    href={r.link}
+                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 pt-1"
+                  >
+                    <span>Launch Module</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                )}
               </div>
             ))}
           </div>
@@ -1162,7 +1172,7 @@ export default function DashboardPage() {
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-widest pl-1">Coming to AlgoVerse</h4>
           <div className="flex flex-wrap gap-3">
             {[
-              "Searching", "Trees", "Graphs", "Dynamic Programming", 
+              "Trees & Hierarchies", "Graphs & Networks", "Dynamic Programming", 
               "Greedy Algorithms", "Backtracking", "String Algorithms"
             ].map((domain, idx) => (
               <span 

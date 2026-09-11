@@ -2750,6 +2750,21 @@ ${guide.step1_goal}
                 document.documentElement.scrollTop = 0;
                 document.body.scrollTop = 0;
               }
+              router.push("/searchmentor");
+            }}
+            aria-label="Launch SearchMentor Studio"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer bg-slate-900/80 border border-white/10 hover:border-cyan-500/30 text-cyan-400 hover:text-cyan-300"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>Searching</span>
+          </button>
+          <button
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              if (typeof document !== "undefined") {
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+              }
               router.push("/gate-exam-sorting-algorithms");
             }}
             aria-label="View GATE Exam Sorting Algorithms Guide & PYQs"

@@ -163,6 +163,12 @@ export default function JsonLd() {
             "name": "GATE Sorting Guide",
             "item": `${siteUrl}/gate-exam-sorting-algorithms`,
           },
+          {
+            "@type": "ListItem",
+            "position": 5,
+            "name": "SearchMentor Studio",
+            "item": `${siteUrl}/searchmentor`,
+          },
         ],
       },
     ],
