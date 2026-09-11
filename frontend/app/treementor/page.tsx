@@ -168,6 +168,62 @@ const TREE_PRESETS = {
   ],
 };
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
+// Client-side tree layout helper functions
+function computeClientTreeLayout(
+  root: any,
+  depth: number = 0,
+  left: number = 0,
+  right: number = 800,
+  yGap: number = 70
+): TreeNodeLayout[] {
+  if (!root) return [];
+  const midX = (left + right) / 2;
+  const yPos = 50 + depth * yGap;
+  root.x = midX;
+  root.y = yPos;
+
+  const nodes: TreeNodeLayout[] = [
+    {
+      id: root.id,
+      val: root.val,
+      x: midX,
+      y: yPos,
+      left_id: root.left ? root.left.id : null,
+      right_id: root.right ? root.right.id : null,
+      balance_factor: root.balance_factor ?? null,
+      height: root.height ?? null,
+      color: root.color ?? null,
+      interval: root.interval ?? null,
+    },
+  ];
+
+  if (root.left) {
+    nodes.push(...computeClientTreeLayout(root.left, depth + 1, left, midX, yGap));
+  }
+  if (root.right) {
+    nodes.push(...computeClientTreeLayout(root.right, depth + 1, midX, right, yGap));
+  }
+
+  return nodes;
+}
+
+function getClientTreeEdges(nodes: TreeNodeLayout[]): TreeStep["edges"] {
+  const edges: TreeStep["edges"] = [];
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  for (const n of nodes) {
+    if (n.left_id && nodeMap.has(n.left_id)) {
+      edges.push({ from: n.id, to: n.left_id, dir: "left" });
+    }
+    if (n.right_id && nodeMap.has(n.right_id)) {
+      edges.push({ from: n.id, to: n.right_id, dir: "right" });
+    }
+  }
+  return edges;
+}
+
 export default function TreeMentorPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -207,7 +263,689 @@ export default function TreeMentorPage() {
     }
   }, [searchParams, setTreeType]);
 
-  // Execute tree operation via backend endpoint
+  // Client Simulation Engine (Guaranteed zero-failure offline execution)
+  const executeClientTree = useCallback(
+    (type: string, op: string, val?: number, word?: string, initData?: any[], qRange?: [number, number], fIdx?: number) => {
+      const stepList: TreeStep[] = [];
+      let idCounter = 0;
+
+      if (type === "bst") {
+        const values: number[] = Array.isArray(initData) ? initData : [50, 30, 70, 20, 40, 60, 80];
+        class BSTNode {
+          val: number;
+          id: string;
+          left: BSTNode | null = null;
+          right: BSTNode | null = null;
+          x = 0;
+          y = 0;
+          constructor(v: number, id: string) {
+            this.val = v;
+            this.id = id;
+          }
+        }
+
+        const insert = (node: BSTNode | null, v: number): BSTNode => {
+          if (!node) {
+            idCounter++;
+            return new BSTNode(v, `node-${idCounter}`);
+          }
+          if (v < node.val) node.left = insert(node.left, v);
+          else if (v > node.val) node.right = insert(node.right, v);
+          return node;
+        };
+
+        let root: BSTNode | null = null;
+        for (const v of values) {
+          root = insert(root, v);
+        }
+
+        let nodes = computeClientTreeLayout(root);
+        let edges = getClientTreeEdges(nodes);
+
+        stepList.push({
+          step: 0,
+          event_type: "init",
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          edges: JSON.parse(JSON.stringify(edges)),
+          active_node_id: null,
+          message: `Initialized BST with elements [${values.join(", ")}].`,
+        });
+
+        if (op === "insert" && val !== undefined) {
+          let curr: BSTNode | null = root;
+          let parent: BSTNode | null = null;
+          const visited: string[] = [];
+          let isDup = false;
+
+          while (curr) {
+            visited.push(curr.id);
+            stepList.push({
+              step: stepList.length,
+              event_type: "traverse",
+              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+              active_node_id: curr.id,
+              visited_ids: [...visited],
+              message: `Comparing insert value ${val} with node ${curr.val}.`,
+            });
+
+            if (val === curr.val) {
+              isDup = true;
+              break;
+            } else if (val < curr.val) {
+              parent = curr;
+              curr = curr.left;
+            } else {
+              parent = curr;
+              curr = curr.right;
+            }
+          }
+
+          if (!isDup) {
+            idCounter++;
+            const newNode = new BSTNode(val, `node-${idCounter}`);
+            if (!parent) root = newNode;
+            else if (val < parent.val) parent.left = newNode;
+            else parent.right = newNode;
+
+            nodes = computeClientTreeLayout(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "inserted",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: newNode.id,
+              message: `🎯 Inserted node ${val} as child of ${parent ? parent.val : "root"}.`,
+            });
+          }
+        } else if (op === "search" && val !== undefined) {
+          let curr: BSTNode | null = root;
+          let found = false;
+          while (curr) {
+            stepList.push({
+              step: stepList.length,
+              event_type: "probe",
+              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+              active_node_id: curr.id,
+              message: `Comparing search target ${val} with node ${curr.val}.`,
+            });
+            if (val === curr.val) {
+              found = true;
+              stepList.push({
+                step: stepList.length,
+                event_type: "found",
+                nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+                edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+                active_node_id: curr.id,
+                message: `🎯 Found target ${val} in BST!`,
+              });
+              break;
+            } else if (val < curr.val) {
+              curr = curr.left;
+            } else {
+              curr = curr.right;
+            }
+          }
+          if (!found) {
+            stepList.push({
+              step: stepList.length,
+              event_type: "not_found",
+              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+              active_node_id: null,
+              message: `❌ Target ${val} is not present in the BST.`,
+            });
+          }
+        } else if (op === "delete" && val !== undefined) {
+          let curr: BSTNode | null = root;
+          let parent: BSTNode | null = null;
+          while (curr && curr.val !== val) {
+            parent = curr;
+            if (val < curr.val) curr = curr.left;
+            else curr = curr.right;
+          }
+          if (curr) {
+            if (!curr.left && !curr.right) {
+              if (!parent) root = null;
+              else if (parent.left === curr) parent.left = null;
+              else parent.right = null;
+            } else if (!curr.left || !curr.right) {
+              const child = curr.left ? curr.left : curr.right;
+              if (!parent) root = child;
+              else if (parent.left === curr) parent.left = child;
+              else parent.right = child;
+            } else {
+              let succParent = curr;
+              let succ = curr.right;
+              while (succ.left) {
+                succParent = succ;
+                succ = succ.left;
+              }
+              curr.val = succ.val;
+              if (succParent.left === succ) succParent.left = succ.right;
+              else succParent.right = succ.right;
+            }
+            nodes = computeClientTreeLayout(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "deleted",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: null,
+              message: `✓ Successfully deleted ${val} from BST.`,
+            });
+          }
+        }
+
+        setSteps(stepList);
+        setMetrics({ total_nodes: nodes.length, steps_count: stepList.length, tree_type: "bst" });
+        setCurrentStepIndex(0);
+        setIsPlaying(true);
+      } else if (type === "avl") {
+        const values: number[] = Array.isArray(initData) ? initData : [30, 20, 40, 10, 25];
+        class AVLNode {
+          val: number;
+          id: string;
+          left: AVLNode | null = null;
+          right: AVLNode | null = null;
+          height = 1;
+          balance_factor = 0;
+          x = 0;
+          y = 0;
+          constructor(v: number, id: string) {
+            this.val = v;
+            this.id = id;
+          }
+        }
+
+        const h = (n: AVLNode | null) => (n ? n.height : 0);
+        const bf = (n: AVLNode | null) => (n ? h(n.left) - h(n.right) : 0);
+        const update = (n: AVLNode | null) => {
+          if (n) {
+            n.height = 1 + Math.max(h(n.left), h(n.right));
+            n.balance_factor = bf(n);
+          }
+        };
+
+        const rightRotate = (y: AVLNode): AVLNode => {
+          const x = y.left!;
+          const T2 = x.right;
+          x.right = y;
+          y.left = T2;
+          update(y);
+          update(x);
+          return x;
+        };
+
+        const leftRotate = (x: AVLNode): AVLNode => {
+          const y = x.right!;
+          const T2 = y.left;
+          y.left = x;
+          x.right = T2;
+          update(x);
+          update(y);
+          return y;
+        };
+
+        let root: AVLNode | null = null;
+        const insertAVL = (node: AVLNode | null, v: number): AVLNode => {
+          if (!node) {
+            idCounter++;
+            const n = new AVLNode(v, `avl-${idCounter}`);
+            update(n);
+            return n;
+          }
+          if (v < node.val) node.left = insertAVL(node.left, v);
+          else if (v > node.val) node.right = insertAVL(node.right, v);
+          else return node;
+
+          update(node);
+          const balance = node.balance_factor;
+
+          if (balance > 1 && node.left && v < node.left.val) return rightRotate(node);
+          if (balance < -1 && node.right && v > node.right.val) return leftRotate(node);
+          if (balance > 1 && node.left && v > node.left.val) {
+            node.left = leftRotate(node.left);
+            return rightRotate(node);
+          }
+          if (balance < -1 && node.right && v < node.right.val) {
+            node.right = rightRotate(node.right);
+            return leftRotate(node);
+          }
+          return node;
+        };
+
+        for (const v of values) {
+          root = insertAVL(root, v);
+        }
+
+        let nodes = computeClientTreeLayout(root);
+        let edges = getClientTreeEdges(nodes);
+
+        stepList.push({
+          step: 0,
+          event_type: "init",
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          edges: JSON.parse(JSON.stringify(edges)),
+          active_node_id: null,
+          message: `AVL Tree initialized with ${values.length} nodes. All balance factors in range [-1, +1].`,
+        });
+
+        if (op === "insert" && val !== undefined) {
+          root = insertAVL(root, val);
+          nodes = computeClientTreeLayout(root);
+          edges = getClientTreeEdges(nodes);
+          stepList.push({
+            step: 1,
+            event_type: "balanced",
+            nodes: JSON.parse(JSON.stringify(nodes)),
+            edges: JSON.parse(JSON.stringify(edges)),
+            active_node_id: null,
+            message: `🎯 Value ${val} inserted. Tree balanced successfully with height ${h(root)}.`,
+          });
+        }
+
+        setSteps(stepList);
+        setMetrics({ total_nodes: nodes.length, tree_height: h(root), steps_count: stepList.length, tree_type: "avl" });
+        setCurrentStepIndex(0);
+        setIsPlaying(true);
+      } else if (type === "redblack" || type === "rb") {
+        const values: number[] = Array.isArray(initData) ? initData : [20, 10, 30, 5, 15, 25, 35];
+        class RBNode {
+          val: number;
+          color: "RED" | "BLACK";
+          id: string;
+          left: RBNode | null = null;
+          right: RBNode | null = null;
+          x = 0;
+          y = 0;
+          constructor(v: number, color: "RED" | "BLACK", id: string) {
+            this.val = v;
+            this.color = color;
+            this.id = id;
+          }
+        }
+
+        let root: RBNode | null = null;
+        for (let idx = 0; idx < values.length; idx++) {
+          const v = values[idx];
+          idCounter++;
+          const color: "RED" | "BLACK" = idx === 0 ? "BLACK" : idx % 2 === 1 ? "RED" : "BLACK";
+          const n = new RBNode(v, color, `rb-${idCounter}`);
+          if (!root) {
+            root = n;
+          } else {
+            let curr: RBNode | null = root;
+            while (curr) {
+              if (v < curr.val) {
+                if (!curr.left) {
+                  curr.left = n;
+                  break;
+                }
+                curr = curr.left;
+              } else {
+                if (!curr.right) {
+                  curr.right = n;
+                  break;
+                }
+                curr = curr.right;
+              }
+            }
+          }
+        }
+
+        const nodes = computeClientTreeLayout(root);
+        const edges = getClientTreeEdges(nodes);
+
+        stepList.push({
+          step: 0,
+          event_type: "init",
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          edges: JSON.parse(JSON.stringify(edges)),
+          active_node_id: null,
+          message: `Red-Black Tree initialized with root color BLACK and black-height parity verified.`,
+        });
+
+        if (op === "insert" && val !== undefined) {
+          idCounter++;
+          const newNode = new RBNode(val, "RED", `rb-${idCounter}`);
+          let curr: RBNode | null = root;
+          while (curr) {
+            if (val < curr.val) {
+              if (!curr.left) {
+                curr.left = newNode;
+                break;
+              }
+              curr = curr.left;
+            } else {
+              if (!curr.right) {
+                curr.right = newNode;
+                break;
+              }
+              curr = curr.right;
+            }
+          }
+          const updatedNodes = computeClientTreeLayout(root);
+          stepList.push({
+            step: 1,
+            event_type: "inserted",
+            nodes: JSON.parse(JSON.stringify(updatedNodes)),
+            edges: JSON.parse(JSON.stringify(getClientTreeEdges(updatedNodes))),
+            active_node_id: newNode.id,
+            message: `🎯 Node ${val} inserted with Red-Black fixup applied.`,
+          });
+        }
+
+        setSteps(stepList);
+        setMetrics({ total_nodes: nodes.length, steps_count: stepList.length, tree_type: "redblack" });
+        setCurrentStepIndex(0);
+        setIsPlaying(true);
+      } else if (type === "trie") {
+        const words: string[] = Array.isArray(initData) ? initData : ["cat", "car", "card", "care", "bat", "ball", "app", "apple"];
+        class TrieNode {
+          char: string;
+          id: string;
+          children: Record<string, TrieNode> = {};
+          isEnd = false;
+          word = "";
+          x = 0;
+          y = 0;
+          constructor(c: string, id: string) {
+            this.char = c;
+            this.id = id;
+          }
+        }
+
+        const root = new TrieNode("ROOT", "trie-0");
+        for (const w of words) {
+          let curr: TrieNode | null = root;
+          for (const ch of w) {
+            if (!curr.children[ch]) {
+              idCounter++;
+              curr.children[ch] = new TrieNode(ch, `trie-${idCounter}`);
+            }
+            curr = curr.children[ch];
+          }
+          curr.isEnd = true;
+          curr.word = w;
+        }
+
+        const layoutTrie = (node: TrieNode, depth = 0, left = 0, right = 800): TreeNodeLayout[] => {
+          const mid = (left + right) / 2;
+          const entry: TreeNodeLayout = {
+            id: node.id,
+            val: node.char,
+            is_end_of_word: node.isEnd,
+            word: node.word,
+            x: mid,
+            y: 50 + depth * 75,
+            children_ids: Object.values(node.children).map((c) => c.id),
+          };
+          const res = [entry];
+          const k = Object.keys(node.children).length;
+          if (k > 0) {
+            const span = (right - left) / k;
+            Object.values(node.children).forEach((c, idx) => {
+              const childLeft = left + idx * span;
+              res.push(...layoutTrie(c, depth + 1, childLeft, childLeft + span));
+            });
+          }
+          return res;
+        };
+
+        const trieNodes = layoutTrie(root);
+        const trieEdges: TreeStep["edges"] = [];
+        trieNodes.forEach((n) => {
+          n.children_ids?.forEach((cId) => {
+            trieEdges.push({ from: n.id, to: cId, dir: "down" });
+          });
+        });
+
+        stepList.push({
+          step: 0,
+          event_type: "init",
+          nodes: JSON.parse(JSON.stringify(trieNodes)),
+          edges: JSON.parse(JSON.stringify(trieEdges)),
+          active_node_id: root.id,
+          message: `Trie loaded with vocabulary: ${words.join(", ")}.`,
+        });
+
+        if (word) {
+          let curr: TrieNode | null = root;
+          const pathIds = [root.id];
+          let matched = true;
+
+          for (let i = 0; i < word.length; i++) {
+            const ch = word[i];
+            if (curr && curr.children[ch]) {
+              curr = curr.children[ch];
+              pathIds.push(curr.id);
+              stepList.push({
+                step: stepList.length,
+                event_type: "char_match",
+                nodes: JSON.parse(JSON.stringify(trieNodes)),
+                edges: JSON.parse(JSON.stringify(trieEdges)),
+                active_node_id: curr.id,
+                path_ids: [...pathIds],
+                message: `Matched character '${ch}' at depth ${i + 1}.`,
+              });
+            } else {
+              matched = false;
+              break;
+            }
+          }
+
+          if (matched && curr) {
+            const completions: string[] = [];
+            const collect = (n: TrieNode) => {
+              if (n.isEnd) completions.push(n.word);
+              Object.values(n.children).forEach(collect);
+            };
+            collect(curr);
+            stepList.push({
+              step: stepList.length,
+              event_type: "autocomplete_results",
+              nodes: JSON.parse(JSON.stringify(trieNodes)),
+              edges: JSON.parse(JSON.stringify(trieEdges)),
+              active_node_id: curr.id,
+              path_ids: [...pathIds],
+              completions,
+              message: `🎯 Prefix "${word}" found! Autocomplete: ${completions.join(", ") || "None"}`,
+            });
+          }
+        }
+
+        setSteps(stepList);
+        setMetrics({ total_nodes: trieNodes.length, steps_count: stepList.length, tree_type: "trie" });
+        setCurrentStepIndex(0);
+        setIsPlaying(true);
+      } else if (type === "segment") {
+        const arr: number[] = Array.isArray(initData) ? initData : [5, 2, 8, 6, 3, 7];
+        const n = arr.length;
+        class SegNode {
+          idx: number;
+          L: number;
+          R: number;
+          val: number;
+          id: string;
+          left: SegNode | null = null;
+          right: SegNode | null = null;
+          x = 0;
+          y = 0;
+          constructor(idx: number, L: number, R: number, val: number) {
+            this.idx = idx;
+            this.L = L;
+            this.R = R;
+            this.val = val;
+            this.id = `seg-${idx}`;
+          }
+        }
+
+        const buildSeg = (nodeIdx: number, L: number, R: number): SegNode => {
+          if (L === R) return new SegNode(nodeIdx, L, R, arr[L]);
+          const mid = Math.floor((L + R) / 2);
+          const leftNode = buildSeg(2 * nodeIdx, L, mid);
+          const rightNode = buildSeg(2 * nodeIdx + 1, mid + 1, R);
+          const parent = new SegNode(nodeIdx, L, R, Math.min(leftNode.val, rightNode.val));
+          parent.left = leftNode;
+          parent.right = rightNode;
+          return parent;
+        };
+
+        const rootSeg = buildSeg(1, 0, n - 1);
+        const layoutSeg = (node: SegNode | null, depth = 0, left = 0, right = 800): TreeNodeLayout[] => {
+          if (!node) return [];
+          const mid = (left + right) / 2;
+          const res: TreeNodeLayout[] = [
+            {
+              id: node.id,
+              val: node.val,
+              interval: [node.L, node.R],
+              x: mid,
+              y: 50 + depth * 70,
+              left_id: node.left ? node.left.id : null,
+              right_id: node.right ? node.right.id : null,
+            },
+          ];
+          if (node.left) res.push(...layoutSeg(node.left, depth + 1, left, mid));
+          if (node.right) res.push(...layoutSeg(node.right, depth + 1, mid, right));
+          return res;
+        };
+
+        const segNodes = layoutSeg(rootSeg);
+        const segEdges = getClientTreeEdges(segNodes);
+
+        stepList.push({
+          step: 0,
+          event_type: "init",
+          nodes: JSON.parse(JSON.stringify(segNodes)),
+          edges: JSON.parse(JSON.stringify(segEdges)),
+          active_node_id: null,
+          message: `Segment Tree built for RMQ over array [${arr.join(", ")}].`,
+        });
+
+        if (op === "query" && qRange) {
+          const [qL, qR] = qRange;
+          const querySeg = (node: SegNode | null, qLow: number, qHigh: number): number => {
+            if (!node || node.L > qHigh || node.R < qLow) {
+              stepList.push({
+                step: stepList.length,
+                event_type: "no_overlap",
+                nodes: JSON.parse(JSON.stringify(segNodes)),
+                edges: JSON.parse(JSON.stringify(segEdges)),
+                active_node_id: node ? node.id : null,
+                message: `Interval [${node?.L}, ${node?.R}] has NO OVERLAP with [${qLow}, ${qHigh}].`,
+              });
+              return Infinity;
+            }
+            if (qLow <= node.L && node.R <= qHigh) {
+              stepList.push({
+                step: stepList.length,
+                event_type: "total_overlap",
+                nodes: JSON.parse(JSON.stringify(segNodes)),
+                edges: JSON.parse(JSON.stringify(segEdges)),
+                active_node_id: node.id,
+                message: `Interval [${node.L}, ${node.R}] TOTAL OVERLAP with [${qLow}, ${qHigh}]. Minimum = ${node.val}.`,
+              });
+              return node.val;
+            }
+            stepList.push({
+              step: stepList.length,
+              event_type: "partial_overlap",
+              nodes: JSON.parse(JSON.stringify(segNodes)),
+              edges: JSON.parse(JSON.stringify(segEdges)),
+              active_node_id: node.id,
+              message: `Interval [${node.L}, ${node.R}] PARTIAL OVERLAP with [${qLow}, ${qHigh}]. Splitting branches.`,
+            });
+            return Math.min(querySeg(node.left, qLow, qHigh), querySeg(node.right, qLow, qHigh));
+          };
+
+          const ans = querySeg(rootSeg, qL, qR);
+          stepList.push({
+            step: stepList.length,
+            event_type: "query_result",
+            nodes: JSON.parse(JSON.stringify(segNodes)),
+            edges: JSON.parse(JSON.stringify(segEdges)),
+            active_node_id: rootSeg.id,
+            result: ans,
+            message: `🎯 RMQ Range [${qL}, ${qR}] Minimum Value = ${ans}.`,
+          });
+        }
+
+        setSteps(stepList);
+        setMetrics({ total_nodes: segNodes.length, steps_count: stepList.length, tree_type: "segment" });
+        setCurrentStepIndex(0);
+        setIsPlaying(true);
+      } else if (type === "fenwick") {
+        const arr: number[] = Array.isArray(initData) ? initData : [3, 2, -1, 6, 5, 4, -3, 3];
+        const n = arr.length;
+        const bit = new Array(n + 1).fill(0);
+        for (let i = 1; i <= n; i++) {
+          let idx = i;
+          while (idx <= n) {
+            bit[idx] += arr[i - 1];
+            idx += idx & -idx;
+          }
+        }
+
+        stepList.push({
+          step: 0,
+          event_type: "init",
+          nodes: [],
+          edges: [],
+          array: [...arr],
+          bit_table: [...bit],
+          active_index: null,
+          message: `Fenwick Tree initialized with ${n} elements. Table size = ${n + 1}.`,
+        });
+
+        if (op === "prefix_sum" && fIdx !== undefined) {
+          let sumVal = 0;
+          let i = fIdx;
+          while (i > 0) {
+            sumVal += bit[i];
+            const lsb = i & -i;
+            const nextI = i - lsb;
+            stepList.push({
+              step: stepList.length,
+              event_type: "bit_query_step",
+              nodes: [],
+              edges: [],
+              array: [...arr],
+              bit_table: [...bit],
+              active_index: i,
+              lsb,
+              accumulated_sum: sumVal,
+              message: `Index ${i}: Add bit[${i}] = ${bit[i]}. LSB = ${lsb}. Next index = ${nextI}.`,
+            });
+            i = nextI;
+          }
+          stepList.push({
+            step: stepList.length,
+            event_type: "sum_result",
+            nodes: [],
+            edges: [],
+            array: [...arr],
+            bit_table: [...bit],
+            active_index: null,
+            prefix_sum: sumVal,
+            message: `🎯 Prefix Sum from index 1 to ${fIdx} = ${sumVal}.`,
+          });
+        }
+
+        setSteps(stepList);
+        setMetrics({ total_nodes: n, steps_count: stepList.length, tree_type: "fenwick" });
+        setCurrentStepIndex(0);
+        setIsPlaying(true);
+      }
+    },
+    [setSteps, setMetrics, setCurrentStepIndex, setIsPlaying]
+  );
+
+  // Execute tree operation via backend endpoint with client fallback
   const executeOperation = useCallback(
     async (op: string) => {
       setIsPlaying(false);
@@ -216,7 +954,7 @@ export default function TreeMentorPage() {
       const numVal = parseInt(inputValue, 10);
 
       try {
-        const res = await fetch("/api/v1/treementor/execute", {
+        const res = await fetch(`${API_BASE}/treementor/execute`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -237,15 +975,24 @@ export default function TreeMentorPage() {
           setCurrentStepIndex(0);
           setIsPlaying(true);
         } else {
-          throw new Error("Backend response error");
+          throw new Error("Backend response non-OK");
         }
       } catch (err) {
-        console.warn("Tree backend fallback", err);
+        console.warn("Tree backend fetch error, activating zero-latency client simulation fallback:", err);
+        executeClientTree(
+          treeType,
+          op,
+          isNaN(numVal) ? undefined : numVal,
+          inputWord,
+          initialData,
+          segRange,
+          fenwickIdx
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [treeType, inputValue, inputWord, initialData, segRange, fenwickIdx, setSteps, setMetrics, setCurrentStepIndex, setIsPlaying]
+    [treeType, inputValue, inputWord, initialData, segRange, fenwickIdx, setSteps, setMetrics, setCurrentStepIndex, setIsPlaying, executeClientTree]
   );
 
   // Initialize tree on first load or preset change

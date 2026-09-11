@@ -36,6 +36,7 @@ export interface TreeStep {
   prefix_sum?: number;
   array?: number[];
   bit_table?: number[];
+  active_index?: number | null;
   lsb?: number;
   accumulated_sum?: number;
   message: string;
