@@ -307,8 +307,8 @@ export default function TreeMentorPage() {
           event_type: "init",
           nodes: JSON.parse(JSON.stringify(nodes)),
           edges: JSON.parse(JSON.stringify(edges)),
-          active_node_id: null,
-          message: `Initialized BST with elements [${values.join(", ")}].`,
+          active_node_id: root ? root.id : null,
+          message: `🌲 BST initialized with elements [${values.join(", ")}]. Root node is ${root ? root.val : "empty"}. All operations begin at the Root.`,
         });
 
         if (op === "insert" && val !== undefined) {
@@ -319,6 +319,7 @@ export default function TreeMentorPage() {
 
           while (curr) {
             visited.push(curr.id);
+            const isRoot = curr === root;
             stepList.push({
               step: stepList.length,
               event_type: "traverse",
@@ -326,7 +327,7 @@ export default function TreeMentorPage() {
               edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
               active_node_id: curr.id,
               visited_ids: [...visited],
-              message: `Comparing insert value ${val} with node ${curr.val}.`,
+              message: `${isRoot ? "🌲 Starting traversal at Root node " : "Inspecting node "}${curr.val}: comparing with insert value ${val}. (${val} < ${curr.val} -> go LEFT, ${val} > ${curr.val} -> go RIGHT).`,
             });
 
             if (val === curr.val) {
@@ -363,13 +364,14 @@ export default function TreeMentorPage() {
           let curr: BSTNode | null = root;
           let found = false;
           while (curr) {
+            const isRoot = curr === root;
             stepList.push({
               step: stepList.length,
               event_type: "probe",
               nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
               edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
               active_node_id: curr.id,
-              message: `Comparing search target ${val} with node ${curr.val}.`,
+              message: `${isRoot ? "🌲 Starting search at Root node " : "Probing node "}${curr.val}: comparing with target ${val}.`,
             });
             if (val === curr.val) {
               found = true;
@@ -434,8 +436,8 @@ export default function TreeMentorPage() {
               event_type: "deleted",
               nodes: JSON.parse(JSON.stringify(nodes)),
               edges: JSON.parse(JSON.stringify(edges)),
-              active_node_id: null,
-              message: `✓ Successfully deleted ${val} from BST.`,
+              active_node_id: root ? root.id : null,
+              message: `✓ Successfully deleted ${val} from BST. Root is now ${root ? root.val : "empty"}.`,
             });
           }
         }
@@ -530,20 +532,36 @@ export default function TreeMentorPage() {
           event_type: "init",
           nodes: JSON.parse(JSON.stringify(nodes)),
           edges: JSON.parse(JSON.stringify(edges)),
-          active_node_id: null,
-          message: `AVL Tree initialized with ${values.length} nodes. All balance factors in range [-1, +1].`,
+          active_node_id: root ? root.id : null,
+          message: `🌲 AVL Tree initialized with ${values.length} nodes. Root node is ${root ? root.val : "empty"} (BF = ${root ? root.balance_factor : 0}). All operations begin at the Root.`,
         });
 
         if (op === "insert" && val !== undefined) {
+          let curr: AVLNode | null = root;
+          while (curr) {
+            const isRoot = curr === root;
+            stepList.push({
+              step: stepList.length,
+              event_type: "avl_descend",
+              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+              active_node_id: curr.id,
+              message: `${isRoot ? "🌲 Starting AVL insert traversal at Root node " : "Inspecting node "}${curr.val} (BF = ${curr.balance_factor}): ${val} ${val < curr.val ? "<" : ">"} ${curr.val} -> descend ${val < curr.val ? "LEFT" : "RIGHT"}.`,
+            });
+            if (val < curr.val) curr = curr.left;
+            else if (val > curr.val) curr = curr.right;
+            else break;
+          }
+
           root = insertAVL(root, val);
           nodes = computeClientTreeLayout(root);
           edges = getClientTreeEdges(nodes);
           stepList.push({
-            step: 1,
+            step: stepList.length,
             event_type: "balanced",
             nodes: JSON.parse(JSON.stringify(nodes)),
             edges: JSON.parse(JSON.stringify(edges)),
-            active_node_id: null,
+            active_node_id: root ? root.id : null,
             message: `🎯 Value ${val} inserted. Tree balanced successfully with height ${h(root)}.`,
           });
         }
@@ -605,14 +623,36 @@ export default function TreeMentorPage() {
           event_type: "init",
           nodes: JSON.parse(JSON.stringify(nodes)),
           edges: JSON.parse(JSON.stringify(edges)),
-          active_node_id: null,
-          message: `Red-Black Tree initialized with root color BLACK and black-height parity verified.`,
+          active_node_id: root ? root.id : null,
+          message: `🌲 Red-Black Tree initialized with ${values.length} nodes. Root node is ${root ? root.val : "empty"} (Color: BLACK — Root Property). All operations begin at the Root.`,
         });
 
         if (op === "insert" && val !== undefined) {
+          let curr: RBNode | null = root;
+          while (curr) {
+            const isRoot = curr === root;
+            stepList.push({
+              step: stepList.length,
+              event_type: "rb_descend",
+              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+              active_node_id: curr.id,
+              message: `${isRoot ? "🌲 Starting RB insert traversal at Root node " : "Inspecting RB node "}${curr.val} (Color: ${curr.color}): ${val} ${val < curr.val ? "<" : ">"} ${curr.val} -> descend ${val < curr.val ? "LEFT" : "RIGHT"}.`,
+            });
+            if (val < curr.val) {
+              if (!curr.left) break;
+              curr = curr.left;
+            } else if (val > curr.val) {
+              if (!curr.right) break;
+              curr = curr.right;
+            } else {
+              break;
+            }
+          }
+
           idCounter++;
           const newNode = new RBNode(val, "RED", `rb-${idCounter}`);
-          let curr: RBNode | null = root;
+          curr = root;
           while (curr) {
             if (val < curr.val) {
               if (!curr.left) {
@@ -630,12 +670,12 @@ export default function TreeMentorPage() {
           }
           const updatedNodes = computeClientTreeLayout(root);
           stepList.push({
-            step: 1,
+            step: stepList.length,
             event_type: "inserted",
             nodes: JSON.parse(JSON.stringify(updatedNodes)),
             edges: JSON.parse(JSON.stringify(getClientTreeEdges(updatedNodes))),
-            active_node_id: newNode.id,
-            message: `🎯 Node ${val} inserted with Red-Black fixup applied.`,
+            active_node_id: root ? root.id : null,
+            message: `🎯 Node ${val} inserted with Red-Black fixup applied. Root is ${root ? root.val : "empty"} (BLACK).`,
           });
         }
 

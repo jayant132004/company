@@ -84,8 +84,8 @@ def bst_operations_with_steps(initial_values: List[int], op: str, value: Optiona
         'event_type': 'init',
         'nodes': copy.deepcopy(current_nodes),
         'edges': copy.deepcopy(current_edges),
-        'active_node_id': None,
-        'message': f'Initialized BST with elements {initial_values}.'
+        'active_node_id': root.id if root else None,
+        'message': f'🌲 BST initialized with {len(initial_values)} nodes. Root node is {root.val if root else "empty"} (depth 0). All traversals begin at the Root.'
     })
 
     if op == 'insert' and value is not None:
@@ -97,6 +97,7 @@ def bst_operations_with_steps(initial_values: List[int], op: str, value: Optiona
 
         while curr:
             visited_ids.append(curr.id)
+            is_root = (curr == root)
             steps.append({
                 'step': len(steps),
                 'event_type': 'traverse',
@@ -104,7 +105,7 @@ def bst_operations_with_steps(initial_values: List[int], op: str, value: Optiona
                 'edges': copy.deepcopy(_get_tree_edges(_compute_tree_layout(root))),
                 'active_node_id': curr.id,
                 'visited_ids': list(visited_ids),
-                'message': f'Comparing insert value {value} with node {curr.val}.'
+                'message': f'{"🌲 Starting at Root node " if is_root else "Inspecting node "}{curr.val}: comparing with insert value {value}. ({value} < {curr.val} -> go LEFT, {value} > {curr.val} -> go RIGHT).'
             })
 
             if value == curr.val:
@@ -149,13 +150,14 @@ def bst_operations_with_steps(initial_values: List[int], op: str, value: Optiona
         curr = root
         found = False
         while curr:
+            is_root = (curr == root)
             steps.append({
                 'step': len(steps),
                 'event_type': 'probe',
                 'nodes': copy.deepcopy(_compute_tree_layout(root)),
                 'edges': copy.deepcopy(_get_tree_edges(_compute_tree_layout(root))),
                 'active_node_id': curr.id,
-                'message': f'Comparing search target {value} with node {curr.val}.'
+                'message': f'{"🌲 Starting search at Root node " if is_root else "Probing node "}{curr.val}: comparing with target {value}.'
             })
 
             if value == curr.val:
@@ -413,11 +415,30 @@ def avl_operations_with_steps(initial_values: List[int], op: str, value: Optiona
         'event_type': 'init',
         'nodes': copy.deepcopy(init_nodes),
         'edges': copy.deepcopy(_get_tree_edges(init_nodes)),
-        'active_node_id': None,
-        'message': f'AVL Tree initialized with {len(initial_values)} nodes. All balance factors in valid range [-1, +1].'
+        'active_node_id': root_ref[0].id if root_ref[0] else None,
+        'message': f'🌲 AVL Tree initialized with {len(initial_values)} nodes. Root node is {root_ref[0].val if root_ref[0] else "empty"} (BF = {root_ref[0].balance_factor if root_ref[0] else 0}). All operations begin at the Root.'
     })
 
     if op == 'insert' and value is not None:
+        # Emit root-to-leaf descent steps
+        curr = root_ref[0]
+        while curr:
+            is_root = (curr == root_ref[0])
+            steps.append({
+                'step': len(steps),
+                'event_type': 'avl_descend',
+                'nodes': copy.deepcopy(_compute_tree_layout(root_ref[0])),
+                'edges': copy.deepcopy(_get_tree_edges(_compute_tree_layout(root_ref[0]))),
+                'active_node_id': curr.id,
+                'message': f'{"🌲 Starting AVL insert traversal at Root node " if is_root else "Inspecting node "}{curr.val} (BF = {curr.balance_factor}): {value} {"<" if value < curr.val else ">"} {curr.val} -> descend {"LEFT" if value < curr.val else "RIGHT"}.'
+            })
+            if value < curr.val:
+                curr = curr.left
+            elif value > curr.val:
+                curr = curr.right
+            else:
+                break
+
         root_ref[0] = avl_insert(root_ref[0], value)
         final_nodes = _compute_tree_layout(root_ref[0])
         steps.append({
@@ -425,7 +446,7 @@ def avl_operations_with_steps(initial_values: List[int], op: str, value: Optiona
             'event_type': 'balanced',
             'nodes': copy.deepcopy(final_nodes),
             'edges': copy.deepcopy(_get_tree_edges(final_nodes)),
-            'active_node_id': None,
+            'active_node_id': root_ref[0].id if root_ref[0] else None,
             'message': f'🎯 Value {value} inserted. Tree balanced successfully with maximum height {get_height(root_ref[0])}.'
         })
 
@@ -878,11 +899,30 @@ def red_black_with_steps(initial_values: List[int], op: str, value: Optional[int
         'event_type': 'init',
         'nodes': copy.deepcopy(layout),
         'edges': copy.deepcopy(_get_tree_edges(layout)),
-        'active_node_id': None,
-        'message': f'Red-Black Tree initialized with root color BLACK and verified black-height invariant.'
+        'active_node_id': tree.root.id if tree.root != tree.NIL else None,
+        'message': f'🌲 Red-Black Tree initialized with {len(initial_values)} nodes. Root node is {tree.root.val if tree.root != tree.NIL else "empty"} (Color: BLACK — Root Property). All operations begin at the Root.'
     })
 
     if op == 'insert' and value is not None:
+        # Emit root-to-leaf descent steps for RB tree
+        curr = tree.root
+        while curr != tree.NIL:
+            is_root = (curr == tree.root)
+            steps.append({
+                'step': len(steps),
+                'event_type': 'rb_descend',
+                'nodes': copy.deepcopy(layout),
+                'edges': copy.deepcopy(_get_tree_edges(layout)),
+                'active_node_id': curr.id,
+                'message': f'{"🌲 Starting RB insert traversal at Root node " if is_root else "Inspecting RB node "}{curr.val} (Color: {curr.color}): {value} {"<" if value < curr.val else ">"} {curr.val} -> descend {"LEFT" if value < curr.val else "RIGHT"}.'
+            })
+            if value < curr.val:
+                curr = curr.left
+            elif value > curr.val:
+                curr = curr.right
+            else:
+                break
+
         tree.insert(value, record_steps=True)
         layout = rb_to_layout(tree.root)
         steps.append({
@@ -890,8 +930,8 @@ def red_black_with_steps(initial_values: List[int], op: str, value: Optional[int
             'event_type': 'inserted',
             'nodes': copy.deepcopy(layout),
             'edges': copy.deepcopy(_get_tree_edges(layout)),
-            'active_node_id': None,
-            'message': f'🎯 Node {value} inserted with symmetric red-black fixup applied.'
+            'active_node_id': tree.root.id if tree.root != tree.NIL else None,
+            'message': f'🎯 Node {value} inserted with symmetric red-black fixup applied. Root is {tree.root.val} (BLACK).'
         })
     elif op == 'delete' and value is not None:
         tree.delete(value, record_steps=True)
@@ -901,8 +941,8 @@ def red_black_with_steps(initial_values: List[int], op: str, value: Optional[int
             'event_type': 'deleted',
             'nodes': copy.deepcopy(layout),
             'edges': copy.deepcopy(_get_tree_edges(layout)),
-            'active_node_id': None,
-            'message': f'✓ Node {value} deletion finished with full double-black resolution.'
+            'active_node_id': tree.root.id if tree.root != tree.NIL else None,
+            'message': f'✓ Node {value} deletion finished with full double-black resolution. Root is {tree.root.val} (BLACK).'
         })
 
     return steps, {'total_nodes': len(layout), 'tree_type': 'redblack'}
@@ -978,7 +1018,7 @@ def trie_operations_with_steps(words: List[str], op: str, query: Optional[str] =
         'nodes': copy.deepcopy(layout),
         'edges': copy.deepcopy(edges),
         'active_node_id': root.id,
-        'message': f'Trie loaded with vocabulary: {", ".join(words)}.'
+        'message': f'🌲 Trie initialized with vocabulary: {", ".join(words)}. ROOT node is the prefix entry point.'
     })
 
     if (op == 'search' or op == 'autocomplete') and query:
@@ -997,7 +1037,7 @@ def trie_operations_with_steps(words: List[str], op: str, query: Optional[str] =
                     'edges': copy.deepcopy(edges),
                     'active_node_id': curr.id,
                     'path_ids': list(path_ids),
-                    'message': f'Matched character \'{ch}\' at depth {i+1}.'
+                    'message': f'Matched character \'{ch}\' at depth {i+1} (prefix path: "{query[:i+1]}").'
                 })
             else:
                 matched = False
@@ -1012,7 +1052,6 @@ def trie_operations_with_steps(words: List[str], op: str, query: Optional[str] =
                 break
 
         if matched:
-            # Find autocomplete completions
             completions = []
             def collect(n: TrieNode):
                 if n.is_end_of_word:
@@ -1096,8 +1135,8 @@ def segment_tree_with_steps(arr: List[int], op: str, qL: int = 0, qR: int = 0, u
         'event_type': 'init',
         'nodes': copy.deepcopy(layout),
         'edges': copy.deepcopy(edges),
-        'active_node_id': None,
-        'message': f'Segment Tree built for Range Minimum Query (RMQ) over array {arr}.'
+        'active_node_id': root_seg.id,
+        'message': f'🌲 Segment Tree built for RMQ over array {arr}. Root node represents the entire interval [0, {n-1}] with aggregate minimum = {root_seg.val}.'
     })
 
     if op == 'query':
@@ -1124,13 +1163,14 @@ def segment_tree_with_steps(arr: List[int], op: str, qL: int = 0, qR: int = 0, u
                 })
                 return node.val
 
+            is_root = (node == root_seg)
             steps.append({
                 'step': len(steps),
                 'event_type': 'partial_overlap',
                 'nodes': copy.deepcopy(layout),
                 'edges': copy.deepcopy(edges),
                 'active_node_id': node.id,
-                'message': f'Interval [{node.L}, {node.R}] has PARTIAL OVERLAP with [{q_low}, {q_high}]. Splitting into left and right subtrees.'
+                'message': f'{"🌲 Starting RMQ query at Root interval " if is_root else "Inspecting interval "}[{node.L}, {node.R}]: PARTIAL OVERLAP with [{q_low}, {q_high}]. Splitting into left and right subtrees.'
             })
             left_res = query_tree(node.left, q_low, q_high)
             right_res = query_tree(node.right, q_low, q_high)
@@ -1172,8 +1212,8 @@ def fenwick_tree_with_steps(arr: List[int], op: str, idx: int = 1, delta: int = 
         'event_type': 'init',
         'array': copy.deepcopy(arr),
         'bit_table': copy.deepcopy(bit),
-        'active_index': None,
-        'message': f'Fenwick Tree initialized with {n} elements. Table size = {n+1}.'
+        'active_index': 1,
+        'message': f'🌲 Fenwick Tree (BIT) initialized with {n} elements. Index 1 is the starting non-zero cell.'
     })
 
     if op == 'prefix_sum':
