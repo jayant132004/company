@@ -42,6 +42,14 @@ export interface TreeStep {
   message: string;
 }
 
+export interface TreeOperation {
+  op: string;
+  value?: number;
+  word?: string;
+  qRange?: [number, number];
+  fIdx?: number;
+}
+
 interface TreeMetrics {
   total_nodes?: number;
   tree_height?: number;
@@ -52,6 +60,8 @@ interface TreeMetrics {
 interface TreeState {
   treeType: "bst" | "avl" | "redblack" | "trie" | "segment" | "fenwick";
   initialData: any[];
+  treeSnapshot: any | null;
+  operationHistory: TreeOperation[];
   steps: TreeStep[];
   currentStepIndex: number;
   isPlaying: boolean;
@@ -60,6 +70,11 @@ interface TreeState {
 
   setTreeType: (type: "bst" | "avl" | "redblack" | "trie" | "segment" | "fenwick") => void;
   setInitialData: (data: any[]) => void;
+  setTreeSnapshot: (snapshot: any | null) => void;
+  setOperationHistory: (history: TreeOperation[]) => void;
+  addOperation: (op: TreeOperation) => void;
+  resetTree: () => void;
+  undoLastOperation: () => TreeOperation[];
   setSteps: (steps: TreeStep[]) => void;
   setCurrentStepIndex: (index: number) => void;
   setIsPlaying: (playing: boolean) => void;
@@ -68,9 +83,17 @@ interface TreeState {
   resetPlayback: () => void;
 }
 
-export const useTreeStore = create<TreeState>((set) => ({
+export const useTreeStore = create<TreeState>((set, get) => ({
   treeType: "avl",
   initialData: [30, 20, 40, 10, 25],
+  treeSnapshot: null,
+  operationHistory: [
+    { op: "insert", value: 30 },
+    { op: "insert", value: 20 },
+    { op: "insert", value: 40 },
+    { op: "insert", value: 10 },
+    { op: "insert", value: 25 },
+  ],
   steps: [],
   currentStepIndex: -1,
   isPlaying: false,
@@ -79,6 +102,25 @@ export const useTreeStore = create<TreeState>((set) => ({
 
   setTreeType: (treeType) => set({ treeType }),
   setInitialData: (initialData) => set({ initialData }),
+  setTreeSnapshot: (treeSnapshot) => set({ treeSnapshot }),
+  setOperationHistory: (operationHistory) => set({ operationHistory }),
+  addOperation: (op) => set((state) => ({ operationHistory: [...state.operationHistory, op] })),
+  resetTree: () => set({
+    treeSnapshot: null,
+    operationHistory: [],
+    initialData: [],
+    steps: [],
+    currentStepIndex: -1,
+    isPlaying: false,
+    metrics: { total_nodes: 0, tree_height: 0, steps_count: 0 },
+  }),
+  undoLastOperation: () => {
+    const history = get().operationHistory;
+    if (history.length === 0) return [];
+    const newHistory = history.slice(0, history.length - 1);
+    set({ operationHistory: newHistory });
+    return newHistory;
+  },
   setSteps: (steps) => set({ steps }),
   setCurrentStepIndex: (currentStepIndex) => set({ currentStepIndex }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),

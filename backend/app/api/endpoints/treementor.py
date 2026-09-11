@@ -15,10 +15,12 @@ from app.services.algorithms.trees import (
 router = APIRouter()
 
 class TreeExecuteRequest(BaseModel):
-    tree_type: str = Field("bst", description="Tree structure: bst, avl, redblack, trie, segment, fenwick")
-    operation: str = Field("insert", description="Operation: insert, delete, search, query, autocomplete, prefix_sum")
+    tree_type: str = Field("avl", description="Tree structure: bst, avl, redblack, trie, segment, fenwick")
+    operation: str = Field("insert", description="Operation: insert, delete, search, query, autocomplete, prefix_sum, init")
     value: Optional[int] = Field(None, description="Numeric value for BST/AVL/RB insert, delete, search")
     word: Optional[str] = Field(None, description="String word or prefix for Trie operations")
+    tree_snapshot: Optional[Dict[str, Any]] = Field(None, description="Current serialized tree state / root node")
+    operation_history: Optional[List[Dict[str, Any]]] = Field(None, description="Operation log for history replaying")
     initial_data: Optional[List[Any]] = Field(None, description="Initial array/words to build tree from")
     query_range: Optional[List[int]] = Field(None, description="[qL, qR] for Segment Tree RMQ")
     index: Optional[int] = Field(None, description="Index for Fenwick / Segment point update/query")
@@ -29,37 +31,66 @@ def execute_tree_op(req: TreeExecuteRequest, user_data: Optional[Dict[str, Any]]
 
     try:
         if tree_type == "bst":
-            init_vals = req.initial_data or [50, 30, 70, 20, 40, 60, 80]
-            steps, metrics = bst_operations_with_steps(init_vals, req.operation, req.value)
-            return {"success": True, "tree_type": "bst", "steps": steps, "metrics": metrics}
+            steps, metrics, current_tree = bst_operations_with_steps(
+                initial_values=req.initial_data,
+                op=req.operation,
+                value=req.value,
+                tree_snapshot=req.tree_snapshot,
+                operation_history=req.operation_history,
+            )
+            return {"success": True, "tree_type": "bst", "steps": steps, "metrics": metrics, "current_tree": current_tree}
 
         elif tree_type == "avl":
-            init_vals = req.initial_data or [30, 20, 40, 10, 25]
-            steps, metrics = avl_operations_with_steps(init_vals, req.operation, req.value)
-            return {"success": True, "tree_type": "avl", "steps": steps, "metrics": metrics}
+            steps, metrics, current_tree = avl_operations_with_steps(
+                initial_values=req.initial_data,
+                op=req.operation,
+                value=req.value,
+                tree_snapshot=req.tree_snapshot,
+                operation_history=req.operation_history,
+            )
+            return {"success": True, "tree_type": "avl", "steps": steps, "metrics": metrics, "current_tree": current_tree}
 
         elif tree_type in ["redblack", "rb"]:
-            init_vals = req.initial_data or [20, 10, 30, 5, 15, 25, 35]
-            steps, metrics = red_black_with_steps(init_vals, req.operation, req.value)
-            return {"success": True, "tree_type": "redblack", "steps": steps, "metrics": metrics}
+            steps, metrics, current_tree = red_black_with_steps(
+                initial_values=req.initial_data,
+                op=req.operation,
+                value=req.value,
+                tree_snapshot=req.tree_snapshot,
+                operation_history=req.operation_history,
+            )
+            return {"success": True, "tree_type": "redblack", "steps": steps, "metrics": metrics, "current_tree": current_tree}
 
         elif tree_type == "trie":
-            words = req.initial_data or ["cat", "car", "card", "care", "bat", "ball", "app", "apple"]
-            steps, metrics = trie_operations_with_steps(words, req.operation, req.word)
-            return {"success": True, "tree_type": "trie", "steps": steps, "metrics": metrics}
+            steps, metrics, current_tree = trie_operations_with_steps(
+                words=req.initial_data,
+                op=req.operation,
+                query=req.word,
+                tree_snapshot=req.tree_snapshot,
+                operation_history=req.operation_history,
+            )
+            return {"success": True, "tree_type": "trie", "steps": steps, "metrics": metrics, "current_tree": current_tree}
 
         elif tree_type in ["segment", "segmenttree"]:
-            arr = req.initial_data or [5, 2, 8, 6, 3, 7]
             qL = req.query_range[0] if req.query_range and len(req.query_range) >= 1 else 1
             qR = req.query_range[1] if req.query_range and len(req.query_range) >= 2 else 4
-            steps, metrics = segment_tree_with_steps(arr, req.operation, qL=qL, qR=qR)
-            return {"success": True, "tree_type": "segment", "steps": steps, "metrics": metrics}
+            steps, metrics, current_tree = segment_tree_with_steps(
+                arr=req.initial_data,
+                op=req.operation,
+                qL=qL,
+                qR=qR,
+                operation_history=req.operation_history,
+            )
+            return {"success": True, "tree_type": "segment", "steps": steps, "metrics": metrics, "current_tree": current_tree}
 
         elif tree_type in ["fenwick", "bit"]:
-            arr = req.initial_data or [3, 2, -1, 6, 5, 4, -3, 3]
             idx = req.index if req.index is not None else 5
-            steps, metrics = fenwick_tree_with_steps(arr, req.operation, idx=idx)
-            return {"success": True, "tree_type": "fenwick", "steps": steps, "metrics": metrics}
+            steps, metrics, current_tree = fenwick_tree_with_steps(
+                arr=req.initial_data,
+                op=req.operation,
+                idx=idx,
+                operation_history=req.operation_history,
+            )
+            return {"success": True, "tree_type": "fenwick", "steps": steps, "metrics": metrics, "current_tree": current_tree}
 
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported tree type '{req.tree_type}'. Supported: bst, avl, redblack, trie, segment, fenwick")

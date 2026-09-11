@@ -29,8 +29,9 @@ import {
   Trash2,
   RefreshCw,
   SlidersHorizontal,
+  Undo2,
 } from "lucide-react";
-import { useTreeStore, TreeNodeLayout, TreeStep } from "../../context/useTreeStore";
+import { useTreeStore, TreeNodeLayout, TreeStep, TreeOperation } from "../../context/useTreeStore";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
 
@@ -137,7 +138,7 @@ const TREE_STRUCTURES: Record<string, TreeStructureMeta> = {
 
 const TREE_PRESETS = {
   avl: [
-    { name: "Balanced AVL", data: [30, 20, 40, 10, 25, 35, 50], defaultVal: 5 },
+    { name: "Balanced AVL (5)", data: [30, 20, 40, 10, 25], defaultVal: 5 },
     { name: "LL Rotation Trigger", data: [30, 20, 10], defaultVal: 5 },
     { name: "RR Rotation Trigger", data: [10, 20, 30], defaultVal: 40 },
     { name: "LR Rotation Trigger", data: [30, 10, 20], defaultVal: 25 },
@@ -231,6 +232,8 @@ export default function TreeMentorPage() {
   const {
     treeType,
     initialData,
+    treeSnapshot,
+    operationHistory,
     steps,
     currentStepIndex,
     isPlaying,
@@ -238,6 +241,11 @@ export default function TreeMentorPage() {
     metrics,
     setTreeType,
     setInitialData,
+    setTreeSnapshot,
+    setOperationHistory,
+    addOperation,
+    resetTree,
+    undoLastOperation,
     setSteps,
     setCurrentStepIndex,
     setIsPlaying,
@@ -265,12 +273,20 @@ export default function TreeMentorPage() {
 
   // Client Simulation Engine (Guaranteed zero-failure offline execution)
   const executeClientTree = useCallback(
-    (type: string, op: string, val?: number, word?: string, initData?: any[], qRange?: [number, number], fIdx?: number) => {
+    (
+      type: string,
+      op: string,
+      val?: number,
+      word?: string,
+      history?: TreeOperation[],
+      qRange?: [number, number],
+      fIdx?: number
+    ) => {
       const stepList: TreeStep[] = [];
       let idCounter = 0;
+      const activeHist = history || [];
 
       if (type === "bst") {
-        const values: number[] = Array.isArray(initData) ? initData : [50, 30, 70, 20, 40, 60, 80];
         class BSTNode {
           val: number;
           id: string;
@@ -294,61 +310,54 @@ export default function TreeMentorPage() {
           return node;
         };
 
+        const deleteBST = (node: BSTNode | null, v: number): BSTNode | null => {
+          if (!node) return null;
+          if (v < node.val) node.left = deleteBST(node.left, v);
+          else if (v > node.val) node.right = deleteBST(node.right, v);
+          else {
+            if (!node.left) return node.right;
+            if (!node.right) return node.left;
+            let succ = node.right;
+            while (succ.left) succ = succ.left;
+            node.val = succ.val;
+            node.right = deleteBST(node.right, succ.val);
+          }
+          return node;
+        };
+
         let root: BSTNode | null = null;
-        for (const v of values) {
-          root = insert(root, v);
+        for (const item of activeHist) {
+          if (item.op === "insert" && item.value !== undefined) root = insert(root, item.value);
+          else if (item.op === "delete" && item.value !== undefined) root = deleteBST(root, item.value);
         }
 
         let nodes = computeClientTreeLayout(root);
         let edges = getClientTreeEdges(nodes);
 
-        stepList.push({
-          step: 0,
-          event_type: "init",
-          nodes: JSON.parse(JSON.stringify(nodes)),
-          edges: JSON.parse(JSON.stringify(edges)),
-          active_node_id: root ? root.id : null,
-          message: `🌲 BST initialized with elements [${values.join(", ")}]. Root node is ${root ? root.val : "empty"}. All operations begin at the Root.`,
-        });
+        if (!root) {
+          stepList.push({
+            step: 0,
+            event_type: "init",
+            nodes: [],
+            edges: [],
+            active_node_id: null,
+            message: "🌲 Empty BST initialized (root is null). Ready for Insert operations.",
+          });
+        } else {
+          stepList.push({
+            step: 0,
+            event_type: "init",
+            nodes: JSON.parse(JSON.stringify(nodes)),
+            edges: JSON.parse(JSON.stringify(edges)),
+            active_node_id: root.id,
+            message: `🌲 BST loaded with ${nodes.length} nodes. Root is ${root.val}. Traversal begins at Root.`,
+          });
+        }
 
         if (op === "insert" && val !== undefined) {
-          let curr: BSTNode | null = root;
-          let parent: BSTNode | null = null;
-          const visited: string[] = [];
-          let isDup = false;
-
-          while (curr) {
-            visited.push(curr.id);
-            const isRoot = curr === root;
-            stepList.push({
-              step: stepList.length,
-              event_type: "traverse",
-              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
-              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
-              active_node_id: curr.id,
-              visited_ids: [...visited],
-              message: `${isRoot ? "🌲 Starting traversal at Root node " : "Inspecting node "}${curr.val}: comparing with insert value ${val}. (${val} < ${curr.val} -> go LEFT, ${val} > ${curr.val} -> go RIGHT).`,
-            });
-
-            if (val === curr.val) {
-              isDup = true;
-              break;
-            } else if (val < curr.val) {
-              parent = curr;
-              curr = curr.left;
-            } else {
-              parent = curr;
-              curr = curr.right;
-            }
-          }
-
-          if (!isDup) {
+          if (!root) {
             idCounter++;
-            const newNode = new BSTNode(val, `node-${idCounter}`);
-            if (!parent) root = newNode;
-            else if (val < parent.val) parent.left = newNode;
-            else parent.right = newNode;
-
+            root = new BSTNode(val, `node-${idCounter}`);
             nodes = computeClientTreeLayout(root);
             edges = getClientTreeEdges(nodes);
             stepList.push({
@@ -356,9 +365,83 @@ export default function TreeMentorPage() {
               event_type: "inserted",
               nodes: JSON.parse(JSON.stringify(nodes)),
               edges: JSON.parse(JSON.stringify(edges)),
-              active_node_id: newNode.id,
-              message: `🎯 Inserted node ${val} as child of ${parent ? parent.val : "root"}.`,
+              active_node_id: root.id,
+              message: `🎯 Inserted ${val} as the Root of the BST.`,
             });
+          } else {
+            let curr: BSTNode | null = root;
+            let parent: BSTNode | null = null;
+            const visited: string[] = [];
+            let isDup = false;
+
+            while (curr) {
+              visited.push(curr.id);
+              const isRoot = curr === root;
+              stepList.push({
+                step: stepList.length,
+                event_type: "traverse",
+                nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+                edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+                active_node_id: curr.id,
+                visited_ids: [...visited],
+                message: `${isRoot ? "🌲 Starting traversal at Root node " : "Inspecting node "}${curr.val}: comparing with insert value ${val}. (${val} < ${curr.val} -> go LEFT, ${val} > ${curr.val} -> go RIGHT).`,
+              });
+
+              if (val === curr.val) {
+                isDup = true;
+                break;
+              } else if (val < curr.val) {
+                parent = curr;
+                curr = curr.left;
+              } else {
+                parent = curr;
+                curr = curr.right;
+              }
+            }
+
+            if (!isDup) {
+              idCounter++;
+              const newNode = new BSTNode(val, `node-${idCounter}`);
+              if (!parent) root = newNode;
+              else if (val < parent.val) parent.left = newNode;
+              else parent.right = newNode;
+
+              nodes = computeClientTreeLayout(root);
+              edges = getClientTreeEdges(nodes);
+              stepList.push({
+                step: stepList.length,
+                event_type: "inserted",
+                nodes: JSON.parse(JSON.stringify(nodes)),
+                edges: JSON.parse(JSON.stringify(edges)),
+                active_node_id: newNode.id,
+                message: `🎯 Inserted node ${val} as child of ${parent ? parent.val : "root"}.`,
+              });
+            }
+          }
+          addOperation({ op: "insert", value: val });
+        } else if (op === "delete" && val !== undefined) {
+          if (!root) {
+            stepList.push({
+              step: stepList.length,
+              event_type: "not_found",
+              nodes: [],
+              edges: [],
+              active_node_id: null,
+              message: `Tree is empty. Cannot delete ${val}.`,
+            });
+          } else {
+            root = deleteBST(root, val);
+            nodes = computeClientTreeLayout(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "deleted",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: root ? root.id : null,
+              message: `✓ Successfully deleted ${val} from BST.`,
+            });
+            addOperation({ op: "delete", value: val });
           }
         } else if (op === "search" && val !== undefined) {
           let curr: BSTNode | null = root;
@@ -400,46 +483,6 @@ export default function TreeMentorPage() {
               message: `❌ Target ${val} is not present in the BST.`,
             });
           }
-        } else if (op === "delete" && val !== undefined) {
-          let curr: BSTNode | null = root;
-          let parent: BSTNode | null = null;
-          while (curr && curr.val !== val) {
-            parent = curr;
-            if (val < curr.val) curr = curr.left;
-            else curr = curr.right;
-          }
-          if (curr) {
-            if (!curr.left && !curr.right) {
-              if (!parent) root = null;
-              else if (parent.left === curr) parent.left = null;
-              else parent.right = null;
-            } else if (!curr.left || !curr.right) {
-              const child = curr.left ? curr.left : curr.right;
-              if (!parent) root = child;
-              else if (parent.left === curr) parent.left = child;
-              else parent.right = child;
-            } else {
-              let succParent = curr;
-              let succ = curr.right;
-              while (succ.left) {
-                succParent = succ;
-                succ = succ.left;
-              }
-              curr.val = succ.val;
-              if (succParent.left === succ) succParent.left = succ.right;
-              else succParent.right = succ.right;
-            }
-            nodes = computeClientTreeLayout(root);
-            edges = getClientTreeEdges(nodes);
-            stepList.push({
-              step: stepList.length,
-              event_type: "deleted",
-              nodes: JSON.parse(JSON.stringify(nodes)),
-              edges: JSON.parse(JSON.stringify(edges)),
-              active_node_id: root ? root.id : null,
-              message: `✓ Successfully deleted ${val} from BST. Root is now ${root ? root.val : "empty"}.`,
-            });
-          }
         }
 
         setSteps(stepList);
@@ -447,7 +490,6 @@ export default function TreeMentorPage() {
         setCurrentStepIndex(0);
         setIsPlaying(true);
       } else if (type === "avl") {
-        const values: number[] = Array.isArray(initData) ? initData : [30, 20, 40, 10, 25];
         class AVLNode {
           val: number;
           id: string;
@@ -492,7 +534,6 @@ export default function TreeMentorPage() {
           return y;
         };
 
-        let root: AVLNode | null = null;
         const insertAVL = (node: AVLNode | null, v: number): AVLNode => {
           if (!node) {
             idCounter++;
@@ -520,50 +561,138 @@ export default function TreeMentorPage() {
           return node;
         };
 
-        for (const v of values) {
-          root = insertAVL(root, v);
+        const deleteAVL = (node: AVLNode | null, v: number): AVLNode | null => {
+          if (!node) return null;
+          if (v < node.val) node.left = deleteAVL(node.left, v);
+          else if (v > node.val) node.right = deleteAVL(node.right, v);
+          else {
+            if (!node.left || !node.right) {
+              const temp = node.left ? node.left : node.right;
+              if (!temp) node = null;
+              else node = temp;
+            } else {
+              let succ = node.right;
+              while (succ.left) succ = succ.left;
+              node.val = succ.val;
+              node.right = deleteAVL(node.right, succ.val);
+            }
+          }
+
+          if (!node) return null;
+          update(node);
+          const balance = node.balance_factor;
+
+          if (balance > 1 && bf(node.left) >= 0) return rightRotate(node);
+          if (balance > 1 && bf(node.left) < 0) {
+            node.left = leftRotate(node.left!);
+            return rightRotate(node);
+          }
+          if (balance < -1 && bf(node.right) <= 0) return leftRotate(node);
+          if (balance < -1 && bf(node.right) > 0) {
+            node.right = rightRotate(node.right!);
+            return leftRotate(node);
+          }
+          return node;
+        };
+
+        let root: AVLNode | null = null;
+        for (const item of activeHist) {
+          if (item.op === "insert" && item.value !== undefined) root = insertAVL(root, item.value);
+          else if (item.op === "delete" && item.value !== undefined) root = deleteAVL(root, item.value);
         }
 
         let nodes = computeClientTreeLayout(root);
         let edges = getClientTreeEdges(nodes);
 
-        stepList.push({
-          step: 0,
-          event_type: "init",
-          nodes: JSON.parse(JSON.stringify(nodes)),
-          edges: JSON.parse(JSON.stringify(edges)),
-          active_node_id: root ? root.id : null,
-          message: `🌲 AVL Tree initialized with ${values.length} nodes. Root node is ${root ? root.val : "empty"} (BF = ${root ? root.balance_factor : 0}). All operations begin at the Root.`,
-        });
-
-        if (op === "insert" && val !== undefined) {
-          let curr: AVLNode | null = root;
-          while (curr) {
-            const isRoot = curr === root;
-            stepList.push({
-              step: stepList.length,
-              event_type: "avl_descend",
-              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
-              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
-              active_node_id: curr.id,
-              message: `${isRoot ? "🌲 Starting AVL insert traversal at Root node " : "Inspecting node "}${curr.val} (BF = ${curr.balance_factor}): ${val} ${val < curr.val ? "<" : ">"} ${curr.val} -> descend ${val < curr.val ? "LEFT" : "RIGHT"}.`,
-            });
-            if (val < curr.val) curr = curr.left;
-            else if (val > curr.val) curr = curr.right;
-            else break;
-          }
-
-          root = insertAVL(root, val);
-          nodes = computeClientTreeLayout(root);
-          edges = getClientTreeEdges(nodes);
+        if (!root) {
           stepList.push({
-            step: stepList.length,
-            event_type: "balanced",
+            step: 0,
+            event_type: "init",
+            nodes: [],
+            edges: [],
+            active_node_id: null,
+            message: "🌲 Empty AVL Tree initialized (root is null). Ready for Insert operations.",
+          });
+        } else {
+          stepList.push({
+            step: 0,
+            event_type: "init",
             nodes: JSON.parse(JSON.stringify(nodes)),
             edges: JSON.parse(JSON.stringify(edges)),
-            active_node_id: root ? root.id : null,
-            message: `🎯 Value ${val} inserted. Tree balanced successfully with height ${h(root)}.`,
+            active_node_id: root.id,
+            message: `🌲 AVL Tree loaded with ${nodes.length} nodes. Root is ${root.val} (BF = ${root.balance_factor}). Traversal begins at Root.`,
           });
+        }
+
+        if (op === "insert" && val !== undefined) {
+          if (!root) {
+            idCounter++;
+            root = new AVLNode(val, `avl-${idCounter}`);
+            update(root);
+            nodes = computeClientTreeLayout(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "inserted",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: root.id,
+              message: `🎯 Inserted ${val} as the Root of the AVL tree.`,
+            });
+          } else {
+            let curr: AVLNode | null = root;
+            while (curr) {
+              const isRoot = curr === root;
+              stepList.push({
+                step: stepList.length,
+                event_type: "avl_descend",
+                nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
+                edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
+                active_node_id: curr.id,
+                message: `${isRoot ? "🌲 Starting AVL insert traversal at Root node " : "Inspecting node "}${curr.val} (BF = ${curr.balance_factor}): ${val} ${val < curr.val ? "<" : ">"} ${curr.val} -> descend ${val < curr.val ? "LEFT" : "RIGHT"}.`,
+              });
+              if (val < curr.val) curr = curr.left;
+              else if (val > curr.val) curr = curr.right;
+              else break;
+            }
+
+            root = insertAVL(root, val);
+            nodes = computeClientTreeLayout(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "balanced",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: root ? root.id : null,
+              message: `🎯 Value ${val} inserted. Tree balanced successfully with height ${h(root)}.`,
+            });
+          }
+          addOperation({ op: "insert", value: val });
+        } else if (op === "delete" && val !== undefined) {
+          if (!root) {
+            stepList.push({
+              step: stepList.length,
+              event_type: "not_found",
+              nodes: [],
+              edges: [],
+              active_node_id: null,
+              message: `Tree is empty. Cannot delete ${val}.`,
+            });
+          } else {
+            root = deleteAVL(root, val);
+            nodes = computeClientTreeLayout(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "deleted",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: root ? root.id : null,
+              message: `✓ Value ${val} deleted from AVL Tree and rebalanced.`,
+            });
+            addOperation({ op: "delete", value: val });
+          }
         }
 
         setSteps(stepList);
@@ -571,7 +700,6 @@ export default function TreeMentorPage() {
         setCurrentStepIndex(0);
         setIsPlaying(true);
       } else if (type === "redblack" || type === "rb") {
-        const values: number[] = Array.isArray(initData) ? initData : [20, 10, 30, 5, 15, 25, 35];
         class RBNode {
           val: number;
           color: "RED" | "BLACK";
@@ -588,95 +716,97 @@ export default function TreeMentorPage() {
         }
 
         let root: RBNode | null = null;
-        for (let idx = 0; idx < values.length; idx++) {
-          const v = values[idx];
-          idCounter++;
-          const color: "RED" | "BLACK" = idx === 0 ? "BLACK" : idx % 2 === 1 ? "RED" : "BLACK";
-          const n = new RBNode(v, color, `rb-${idCounter}`);
-          if (!root) {
-            root = n;
-          } else {
-            let curr: RBNode | null = root;
-            while (curr) {
-              if (v < curr.val) {
-                if (!curr.left) {
-                  curr.left = n;
+        for (let idx = 0; idx < activeHist.length; idx++) {
+          const item = activeHist[idx];
+          if (item.op === "insert" && item.value !== undefined) {
+            idCounter++;
+            const color: "RED" | "BLACK" = idx === 0 ? "BLACK" : idx % 2 === 1 ? "RED" : "BLACK";
+            const n = new RBNode(item.value, color, `rb-${idCounter}`);
+            if (!root) {
+              root = n;
+            } else {
+              let curr: RBNode | null = root;
+              while (curr) {
+                if (item.value < curr.val) {
+                  if (!curr.left) {
+                    curr.left = n;
+                    break;
+                  }
+                  curr = curr.left;
+                } else if (item.value > curr.val) {
+                  if (!curr.right) {
+                    curr.right = n;
+                    break;
+                  }
+                  curr = curr.right;
+                } else {
                   break;
                 }
-                curr = curr.left;
-              } else {
-                if (!curr.right) {
-                  curr.right = n;
-                  break;
-                }
-                curr = curr.right;
               }
             }
           }
         }
 
-        const nodes = computeClientTreeLayout(root);
-        const edges = getClientTreeEdges(nodes);
+        let nodes = computeClientTreeLayout(root);
+        let edges = getClientTreeEdges(nodes);
 
-        stepList.push({
-          step: 0,
-          event_type: "init",
-          nodes: JSON.parse(JSON.stringify(nodes)),
-          edges: JSON.parse(JSON.stringify(edges)),
-          active_node_id: root ? root.id : null,
-          message: `🌲 Red-Black Tree initialized with ${values.length} nodes. Root node is ${root ? root.val : "empty"} (Color: BLACK — Root Property). All operations begin at the Root.`,
-        });
+        if (!root) {
+          stepList.push({
+            step: 0,
+            event_type: "init",
+            nodes: [],
+            edges: [],
+            active_node_id: null,
+            message: "🌲 Empty Red-Black Tree initialized (root is null). Ready for Insert operations.",
+          });
+        } else {
+          stepList.push({
+            step: 0,
+            event_type: "init",
+            nodes: JSON.parse(JSON.stringify(nodes)),
+            edges: JSON.parse(JSON.stringify(edges)),
+            active_node_id: root.id,
+            message: `🌲 Red-Black Tree loaded with ${nodes.length} nodes. Root is ${root.val} (BLACK). Traversal begins at Root.`,
+          });
+        }
 
         if (op === "insert" && val !== undefined) {
-          let curr: RBNode | null = root;
-          while (curr) {
-            const isRoot = curr === root;
-            stepList.push({
-              step: stepList.length,
-              event_type: "rb_descend",
-              nodes: JSON.parse(JSON.stringify(computeClientTreeLayout(root))),
-              edges: JSON.parse(JSON.stringify(getClientTreeEdges(computeClientTreeLayout(root)))),
-              active_node_id: curr.id,
-              message: `${isRoot ? "🌲 Starting RB insert traversal at Root node " : "Inspecting RB node "}${curr.val} (Color: ${curr.color}): ${val} ${val < curr.val ? "<" : ">"} ${curr.val} -> descend ${val < curr.val ? "LEFT" : "RIGHT"}.`,
-            });
-            if (val < curr.val) {
-              if (!curr.left) break;
-              curr = curr.left;
-            } else if (val > curr.val) {
-              if (!curr.right) break;
-              curr = curr.right;
-            } else {
-              break;
-            }
-          }
-
           idCounter++;
-          const newNode = new RBNode(val, "RED", `rb-${idCounter}`);
-          curr = root;
-          while (curr) {
-            if (val < curr.val) {
-              if (!curr.left) {
-                curr.left = newNode;
+          const color: "RED" | "BLACK" = !root ? "BLACK" : "RED";
+          const n = new RBNode(val, color, `rb-${idCounter}`);
+          if (!root) {
+            root = n;
+          } else {
+            let curr: RBNode | null = root;
+            while (curr) {
+              if (val < curr.val) {
+                if (!curr.left) {
+                  curr.left = n;
+                  break;
+                }
+                curr = curr.left;
+              } else if (val > curr.val) {
+                if (!curr.right) {
+                  curr.right = n;
+                  break;
+                }
+                curr = curr.right;
+              } else {
                 break;
               }
-              curr = curr.left;
-            } else {
-              if (!curr.right) {
-                curr.right = newNode;
-                break;
-              }
-              curr = curr.right;
             }
           }
-          const updatedNodes = computeClientTreeLayout(root);
+          nodes = computeClientTreeLayout(root);
+          edges = getClientTreeEdges(nodes);
           stepList.push({
             step: stepList.length,
             event_type: "inserted",
-            nodes: JSON.parse(JSON.stringify(updatedNodes)),
-            edges: JSON.parse(JSON.stringify(getClientTreeEdges(updatedNodes))),
-            active_node_id: root ? root.id : null,
-            message: `🎯 Node ${val} inserted with Red-Black fixup applied. Root is ${root ? root.val : "empty"} (BLACK).`,
+            nodes: JSON.parse(JSON.stringify(nodes)),
+            edges: JSON.parse(JSON.stringify(edges)),
+            active_node_id: n.id,
+            message: `🎯 Node ${val} inserted into Red-Black Tree.`,
           });
+          addOperation({ op: "insert", value: val });
         }
 
         setSteps(stepList);
@@ -684,7 +814,6 @@ export default function TreeMentorPage() {
         setCurrentStepIndex(0);
         setIsPlaying(true);
       } else if (type === "trie") {
-        const words: string[] = Array.isArray(initData) ? initData : ["cat", "car", "card", "care", "bat", "ball", "app", "apple"];
         class TrieNode {
           char: string;
           id: string;
@@ -693,24 +822,27 @@ export default function TreeMentorPage() {
           word = "";
           x = 0;
           y = 0;
-          constructor(c: string, id: string) {
-            this.char = c;
+          constructor(char: string, id: string) {
+            this.char = char;
             this.id = id;
           }
         }
 
         const root = new TrieNode("ROOT", "trie-0");
-        for (const w of words) {
-          let curr: TrieNode | null = root;
-          for (const ch of w) {
-            if (!curr.children[ch]) {
-              idCounter++;
-              curr.children[ch] = new TrieNode(ch, `trie-${idCounter}`);
+        for (const item of activeHist) {
+          const w = item.word;
+          if (item.op === "insert" && w) {
+            let curr: TrieNode | null = root;
+            for (const ch of w) {
+              if (!curr.children[ch]) {
+                idCounter++;
+                curr.children[ch] = new TrieNode(ch, `trie-${idCounter}`);
+              }
+              curr = curr.children[ch];
             }
-            curr = curr.children[ch];
+            curr.isEnd = true;
+            curr.word = w;
           }
-          curr.isEnd = true;
-          curr.word = w;
         }
 
         const layoutTrie = (node: TrieNode, depth = 0, left = 0, right = 800): TreeNodeLayout[] => {
@@ -750,10 +882,39 @@ export default function TreeMentorPage() {
           nodes: JSON.parse(JSON.stringify(trieNodes)),
           edges: JSON.parse(JSON.stringify(trieEdges)),
           active_node_id: root.id,
-          message: `Trie loaded with vocabulary: ${words.join(", ")}.`,
+          message: `Trie loaded with ${activeHist.length} vocabulary words.`,
         });
 
-        if (word) {
+        if (op === "insert" && word) {
+          let curr: TrieNode | null = root;
+          for (const ch of word) {
+            if (!curr.children[ch]) {
+              idCounter++;
+              curr.children[ch] = new TrieNode(ch, `trie-${idCounter}`);
+            }
+            curr = curr.children[ch];
+          }
+          curr.isEnd = true;
+          curr.word = word;
+
+          const updatedNodes = layoutTrie(root);
+          const updatedEdges: TreeStep["edges"] = [];
+          updatedNodes.forEach((n) => {
+            n.children_ids?.forEach((cId) => {
+              updatedEdges.push({ from: n.id, to: cId, dir: "down" });
+            });
+          });
+
+          stepList.push({
+            step: stepList.length,
+            event_type: "inserted",
+            nodes: JSON.parse(JSON.stringify(updatedNodes)),
+            edges: JSON.parse(JSON.stringify(updatedEdges)),
+            active_node_id: root.id,
+            message: `🎯 Word "${word}" inserted into Trie dictionary.`,
+          });
+          addOperation({ op: "insert", word });
+        } else if ((op === "search" || op === "autocomplete") && word) {
           let curr: TrieNode | null = root;
           const pathIds = [root.id];
           let matched = true;
@@ -803,7 +964,7 @@ export default function TreeMentorPage() {
         setCurrentStepIndex(0);
         setIsPlaying(true);
       } else if (type === "segment") {
-        const arr: number[] = Array.isArray(initData) ? initData : [5, 2, 8, 6, 3, 7];
+        const arr: number[] = Array.isArray(initialData) && initialData.length > 0 ? initialData : [5, 2, 8, 6, 3, 7];
         const n = arr.length;
         class SegNode {
           idx: number;
@@ -863,7 +1024,7 @@ export default function TreeMentorPage() {
           event_type: "init",
           nodes: JSON.parse(JSON.stringify(segNodes)),
           edges: JSON.parse(JSON.stringify(segEdges)),
-          active_node_id: null,
+          active_node_id: rootSeg.id,
           message: `Segment Tree built for RMQ over array [${arr.join(", ")}].`,
         });
 
@@ -920,7 +1081,7 @@ export default function TreeMentorPage() {
         setCurrentStepIndex(0);
         setIsPlaying(true);
       } else if (type === "fenwick") {
-        const arr: number[] = Array.isArray(initData) ? initData : [3, 2, -1, 6, 5, 4, -3, 3];
+        const arr: number[] = Array.isArray(initialData) && initialData.length > 0 ? initialData : [3, 2, -1, 6, 5, 4, -3, 3];
         const n = arr.length;
         const bit = new Array(n + 1).fill(0);
         for (let i = 1; i <= n; i++) {
@@ -938,7 +1099,7 @@ export default function TreeMentorPage() {
           edges: [],
           array: [...arr],
           bit_table: [...bit],
-          active_index: null,
+          active_index: 1,
           message: `Fenwick Tree initialized with ${n} elements. Table size = ${n + 1}.`,
         });
 
@@ -982,16 +1143,23 @@ export default function TreeMentorPage() {
         setIsPlaying(true);
       }
     },
-    [setSteps, setMetrics, setCurrentStepIndex, setIsPlaying]
+    [initialData, addOperation, setSteps, setMetrics, setCurrentStepIndex, setIsPlaying]
   );
 
   // Execute tree operation via backend endpoint with client fallback
   const executeOperation = useCallback(
-    async (op: string) => {
+    async (
+      op: string,
+      valOverride?: number,
+      historyOverride?: TreeOperation[],
+      wordOverride?: string
+    ) => {
       setIsPlaying(false);
       setIsLoading(true);
 
-      const numVal = parseInt(inputValue, 10);
+      const activeHistory = historyOverride !== undefined ? historyOverride : operationHistory;
+      const numVal = valOverride !== undefined ? valOverride : parseInt(inputValue, 10);
+      const targetWord = wordOverride !== undefined ? wordOverride : inputWord;
 
       try {
         const res = await fetch(`${API_BASE}/treementor/execute`, {
@@ -1001,8 +1169,10 @@ export default function TreeMentorPage() {
             tree_type: treeType,
             operation: op,
             value: isNaN(numVal) ? undefined : numVal,
-            word: inputWord,
-            initial_data: initialData,
+            word: targetWord,
+            tree_snapshot: treeSnapshot,
+            operation_history: activeHistory,
+            initial_data: activeHistory.length > 0 ? undefined : initialData,
             query_range: segRange,
             index: fenwickIdx,
           }),
@@ -1012,8 +1182,18 @@ export default function TreeMentorPage() {
           const data = await res.json();
           setSteps(data.steps || []);
           setMetrics(data.metrics || null);
+          setTreeSnapshot(data.current_tree || null);
           setCurrentStepIndex(0);
           setIsPlaying(true);
+
+          // If mutating operation, record in history
+          if (op === "insert" && !isNaN(numVal) && (treeType === "bst" || treeType === "avl" || treeType === "redblack")) {
+            addOperation({ op: "insert", value: numVal });
+          } else if (op === "delete" && !isNaN(numVal) && (treeType === "bst" || treeType === "avl" || treeType === "redblack")) {
+            addOperation({ op: "delete", value: numVal });
+          } else if (op === "insert" && treeType === "trie" && targetWord) {
+            addOperation({ op: "insert", word: targetWord });
+          }
         } else {
           throw new Error("Backend response non-OK");
         }
@@ -1023,8 +1203,8 @@ export default function TreeMentorPage() {
           treeType,
           op,
           isNaN(numVal) ? undefined : numVal,
-          inputWord,
-          initialData,
+          targetWord,
+          activeHistory,
           segRange,
           fenwickIdx
         );
@@ -1032,13 +1212,29 @@ export default function TreeMentorPage() {
         setIsLoading(false);
       }
     },
-    [treeType, inputValue, inputWord, initialData, segRange, fenwickIdx, setSteps, setMetrics, setCurrentStepIndex, setIsPlaying, executeClientTree]
+    [
+      treeType,
+      inputValue,
+      inputWord,
+      treeSnapshot,
+      operationHistory,
+      initialData,
+      segRange,
+      fenwickIdx,
+      setSteps,
+      setMetrics,
+      setTreeSnapshot,
+      addOperation,
+      setCurrentStepIndex,
+      setIsPlaying,
+      executeClientTree,
+    ]
   );
 
-  // Initialize tree on first load or preset change
+  // Initialize tree on first load
   useEffect(() => {
-    executeOperation("init");
-  }, [treeType, initialData]);
+    executeOperation("init", undefined, operationHistory);
+  }, [treeType]);
 
   // Playback timer ticker
   useEffect(() => {
@@ -1059,11 +1255,60 @@ export default function TreeMentorPage() {
 
   const loadPreset = (preset: any) => {
     setInitialData(preset.data);
-    if (preset.defaultVal !== undefined) setInputValue(preset.defaultVal.toString());
-    if (preset.defaultWord !== undefined) setInputWord(preset.defaultWord);
-    if (preset.queryRange !== undefined) setSegRange(preset.queryRange);
-    if (preset.defaultIndex !== undefined) setFenwickIdx(preset.defaultIndex);
+    let presetHistory: TreeOperation[] = [];
+    if (treeType === "trie") {
+      presetHistory = (preset.data || []).map((w: string) => ({ op: "insert", word: w }));
+      if (preset.defaultWord !== undefined) setInputWord(preset.defaultWord);
+    } else if (treeType === "segment" || treeType === "fenwick") {
+      presetHistory = [];
+      if (preset.queryRange !== undefined) setSegRange(preset.queryRange);
+      if (preset.defaultIndex !== undefined) setFenwickIdx(preset.defaultIndex);
+    } else {
+      presetHistory = (preset.data || []).map((v: number) => ({ op: "insert", value: v }));
+      if (preset.defaultVal !== undefined) setInputValue(preset.defaultVal.toString());
+    }
+
+    setOperationHistory(presetHistory);
     resetPlayback();
+    executeOperation("init", undefined, presetHistory);
+  };
+
+  const handleResetToEmpty = () => {
+    resetTree();
+    executeOperation("init", undefined, []);
+  };
+
+  const handleUndo = () => {
+    const newHistory = undoLastOperation();
+    executeOperation("init", undefined, newHistory);
+  };
+
+  const handleInsert = () => {
+    if (treeType === "trie") {
+      if (!inputWord.trim()) return;
+      executeOperation("insert", undefined, undefined, inputWord.trim());
+    } else {
+      const num = parseInt(inputValue, 10);
+      if (isNaN(num)) return;
+      executeOperation("insert", num);
+    }
+  };
+
+  const handleDelete = () => {
+    const num = parseInt(inputValue, 10);
+    if (isNaN(num)) return;
+    executeOperation("delete", num);
+  };
+
+  const handleSearch = () => {
+    if (treeType === "trie") {
+      if (!inputWord.trim()) return;
+      executeOperation("search", undefined, undefined, inputWord.trim());
+    } else {
+      const num = parseInt(inputValue, 10);
+      if (isNaN(num)) return;
+      executeOperation("search", num);
+    }
   };
 
   const currentNodes: TreeNodeLayout[] = activeStep?.nodes || [];
@@ -1197,7 +1442,7 @@ export default function TreeMentorPage() {
 
         {/* 4. TREE OPERATIONS TOOLBAR */}
         <section className="p-5 rounded-2xl bg-slate-950/70 border border-white/5 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
-          {/* Operation Input Control */}
+          {/* Operation Input Controls */}
           <div className="flex items-center gap-3 flex-wrap">
             {treeType === "trie" ? (
               <div className="flex items-center gap-2">
@@ -1210,9 +1455,17 @@ export default function TreeMentorPage() {
                   className="w-28 px-3 py-1.5 rounded-lg bg-slate-900 border border-white/10 text-white font-mono font-bold text-sm focus:outline-none focus:border-emerald-500"
                 />
                 <button
-                  onClick={() => executeOperation("search")}
+                  onClick={handleInsert}
                   disabled={isLoading}
-                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors"
+                  className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Insert Word</span>
+                </button>
+                <button
+                  onClick={handleSearch}
+                  disabled={isLoading}
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/10 text-gray-200 font-semibold text-xs transition-colors cursor-pointer"
                 >
                   Search / Autocomplete
                 </button>
@@ -1235,7 +1488,7 @@ export default function TreeMentorPage() {
                 />
                 <button
                   onClick={() => executeOperation("query")}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer"
                 >
                   Query RMQ
                 </button>
@@ -1251,22 +1504,25 @@ export default function TreeMentorPage() {
                 />
                 <button
                   onClick={() => executeOperation("prefix_sum")}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer"
                 >
                   Calculate Sum
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-white font-mono">Value:</span>
                 <input
                   type="number"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInsert();
+                  }}
                   className="w-20 px-3 py-1.5 rounded-lg bg-slate-900 border border-white/10 text-white font-mono font-bold text-sm focus:outline-none focus:border-emerald-500"
                 />
                 <button
-                  onClick={() => executeOperation("insert")}
+                  onClick={handleInsert}
                   disabled={isLoading}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
                 >
@@ -1274,25 +1530,51 @@ export default function TreeMentorPage() {
                   <span>Insert</span>
                 </button>
                 <button
-                  onClick={() => executeOperation("search")}
+                  onClick={handleDelete}
+                  disabled={isLoading}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete</span>
+                </button>
+                <button
+                  onClick={handleSearch}
                   disabled={isLoading}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/10 text-gray-200 font-semibold text-xs transition-colors cursor-pointer"
                 >
                   <Search className="h-3.5 w-3.5" />
                   <span>Search</span>
                 </button>
-                {(treeType === "bst" || treeType === "redblack") && (
-                  <button
-                    onClick={() => executeOperation("delete")}
-                    disabled={isLoading}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-semibold text-xs transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Delete</span>
-                  </button>
-                )}
               </div>
             )}
+
+            {/* Undo & Reset to Empty Buttons */}
+            <div className="flex items-center gap-2 border-l border-white/10 pl-3">
+              <button
+                onClick={handleUndo}
+                disabled={operationHistory.length === 0 || isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/10 text-gray-300 hover:text-white font-semibold text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                title="Undo last operation (replays history)"
+              >
+                <Undo2 className="h-3.5 w-3.5 text-amber-400" />
+                <span>Undo</span>
+                {operationHistory.length > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-white/10 text-[10px] font-mono text-amber-300">
+                    {operationHistory.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={handleResetToEmpty}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 font-semibold text-xs transition-colors cursor-pointer"
+                title="Clear entire tree to empty root (root = null)"
+              >
+                <RotateCcw className="h-3.5 w-3.5 text-rose-400" />
+                <span>Reset to Empty</span>
+              </button>
+            </div>
           </div>
 
           {/* Presets List */}
@@ -1302,7 +1584,7 @@ export default function TreeMentorPage() {
               <button
                 key={idx}
                 onClick={() => loadPreset(p)}
-                className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/5 text-[11px] font-semibold text-gray-300 hover:text-white whitespace-nowrap transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/5 text-[11px] font-semibold text-gray-300 hover:text-white whitespace-nowrap transition-colors cursor-pointer"
               >
                 {p.name}
               </button>
@@ -1321,6 +1603,11 @@ export default function TreeMentorPage() {
               {activeStep?.rotation && (
                 <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-pink-500/20 text-pink-300 border border-pink-500/40 animate-pulse">
                   ⚡ Rotation: {activeStep.rotation}
+                </span>
+              )}
+              {metrics?.total_nodes !== undefined && (
+                <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-white/5 text-gray-400 border border-white/10">
+                  Nodes: {metrics.total_nodes}
                 </span>
               )}
             </div>
@@ -1357,7 +1644,7 @@ export default function TreeMentorPage() {
               <button
                 onClick={resetPlayback}
                 className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/5 text-gray-400 hover:text-white cursor-pointer ml-1"
-                title="Reset"
+                title="Replay from Step 0"
               >
                 <RotateCcw className="h-4 w-4" />
               </button>
@@ -1399,7 +1686,6 @@ export default function TreeMentorPage() {
                   const toNode = currentNodes.find((n) => n.id === edge.to);
                   if (!fromNode || !toNode) return null;
 
-                  const dx = toNode.x - fromNode.x;
                   const dy = toNode.y - fromNode.y;
                   const path = `M ${fromNode.x} ${fromNode.y} C ${fromNode.x} ${fromNode.y + dy * 0.5}, ${toNode.x} ${fromNode.y + dy * 0.5}, ${toNode.x} ${toNode.y}`;
 
@@ -1506,9 +1792,28 @@ export default function TreeMentorPage() {
                 })}
               </svg>
             ) : (
-              <div className="flex flex-col items-center gap-2 text-gray-500">
-                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
-                <span className="text-xs font-mono">Rendering Tree...</span>
+              <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 gap-3">
+                <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
+                  <GitFork className="h-8 w-8 stroke-[1.5]" />
+                </div>
+                <div className="flex flex-col gap-1 max-w-md">
+                  <h3 className="text-base font-bold text-white">Empty {activeMeta.name}</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed font-mono">
+                    Root is currently <span className="text-emerald-400 font-semibold">null</span>. Enter a value in the toolbar above and click <span className="text-emerald-300 font-bold">Insert</span> to build your custom tree step-by-step.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[11px] font-mono text-gray-500">Quick Start:</span>
+                  <button
+                    onClick={() => {
+                      setInputValue("10");
+                      executeOperation("insert", 10);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold transition-all cursor-pointer"
+                  >
+                    + Insert 10 as Root
+                  </button>
+                </div>
               </div>
             )}
           </div>
