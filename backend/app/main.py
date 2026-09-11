@@ -5,6 +5,7 @@ from app.core.firebase import init_firebase
 from app.api.deps import get_current_user, get_current_user_optional
 from app.api.endpoints.sortmentor import router as sortmentor_router
 from app.api.endpoints.searchmentor import router as searchmentor_router
+from app.api.endpoints.treementor import router as treementor_router
 from app.api.endpoints.feedback import router as feedback_router
 from app.services.qdrant_service import index_knowledge_base
 from app.services.knowledge.recommendation_engine import generate_recommendations
@@ -46,6 +47,13 @@ app.include_router(
     searchmentor_router,
     prefix=f"{settings.API_V1_STR}/searchmentor",
     tags=["SearchMentor"]
+)
+
+# Register the TreeMentor endpoints router
+app.include_router(
+    treementor_router,
+    prefix=f"{settings.API_V1_STR}/treementor",
+    tags=["TreeMentor"]
 )
 
 # Register the Feedback endpoints router

@@ -137,6 +137,23 @@ export default function JsonLd() {
         "mainEntityOfPage": `${siteUrl}/gate-exam-sorting-algorithms`
       },
       {
+        "@type": "LearningResource",
+        "@id": `${siteUrl}/treementor#resource`,
+        "name": "TreeMentor Interactive Hierarchical Data Structures",
+        "description":
+          "Interactive tree visualizer supporting Binary Search Trees, AVL Trees with LL/RR/LR/RL balance rotations, Red-Black Trees with symmetric double-black deletions, Prefix Tries, Segment Trees, and Fenwick Binary Indexed Trees.",
+        "educationalLevel": "Intermediate to Advanced Computer Science",
+        "learningResourceType": "Interactive Simulation & Tutorial",
+        "about": [
+          { "@type": "Thing", "name": "Binary Search Tree" },
+          { "@type": "Thing", "name": "AVL Tree" },
+          { "@type": "Thing", "name": "Red-Black Tree" },
+          { "@type": "Thing", "name": "Prefix Trie" },
+          { "@type": "Thing", "name": "Segment Tree" },
+          { "@type": "Thing", "name": "Fenwick Tree" },
+        ],
+      },
+      {
         "@type": "BreadcrumbList",
         "itemListElement": [
           {
@@ -168,6 +185,12 @@ export default function JsonLd() {
             "position": 5,
             "name": "SearchMentor Studio",
             "item": `${siteUrl}/searchmentor`,
+          },
+          {
+            "@type": "ListItem",
+            "position": 6,
+            "name": "TreeMentor Studio",
+            "item": `${siteUrl}/treementor`,
           },
         ],
       },

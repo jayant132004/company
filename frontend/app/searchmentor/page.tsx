@@ -28,6 +28,7 @@ import {
   RefreshCw,
   Plus,
   Minus,
+  GitFork,
 } from "lucide-react";
 import { useSearchStore, SearchStep } from "../../context/useSearchStore";
 import UserDropdown from "../../components/auth/UserDropdown";
@@ -517,6 +518,13 @@ export default function SearchMentorPage() {
               <Search className="h-4 w-4 text-cyan-400" />
               SearchMentor
             </span>
+            <Link
+              href="/treementor"
+              className="text-gray-400 hover:text-emerald-400 flex items-center gap-1.5 transition-colors"
+            >
+              <GitFork className="h-4 w-4 text-emerald-400" />
+              <span>TreeMentor</span>
+            </Link>
             <Link
               href="/gate-exam-sorting-algorithms"
               className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors"

@@ -63,7 +63,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 1.0,
     },
+    {
+      url: `${siteUrl}/treementor`,
+      lastModified: currentDate,
+      changeFrequency: "daily",
+      priority: 1.0,
+    },
   ];
+
+  const TREE_SLUGS = ["avl", "bst", "redblack", "trie", "segment", "fenwick"];
+
+  // Specific Tree deep-links for Google indexing
+  const treeRoutes: MetadataRoute.Sitemap = TREE_SLUGS.map((slug) => ({
+    url: `${siteUrl}/treementor?structure=${slug}`,
+    lastModified: currentDate,
+    changeFrequency: "weekly" as const,
+    priority: 0.9,
+  }));
 
   // Specific Algorithm deep-links for Google indexing
   const algoRoutes: MetadataRoute.Sitemap = ALGORITHM_SLUGS.map((slug) => ({
@@ -73,5 +89,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.9,
   }));
 
-  return [...mainRoutes, ...algoRoutes];
+  return [...mainRoutes, ...treeRoutes, ...algoRoutes];
 }

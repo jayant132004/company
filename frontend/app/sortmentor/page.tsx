@@ -58,6 +58,7 @@ import {
   Activity,
   Lock,
   LogIn,
+  GitFork,
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
@@ -2757,6 +2758,21 @@ ${guide.step1_goal}
           >
             <Search className="h-3.5 w-3.5" />
             <span>Searching</span>
+          </button>
+          <button
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              if (typeof document !== "undefined") {
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+              }
+              router.push("/treementor");
+            }}
+            aria-label="Launch TreeMentor Studio"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer bg-slate-900/80 border border-white/10 hover:border-emerald-500/30 text-emerald-400 hover:text-emerald-300"
+          >
+            <GitFork className="h-3.5 w-3.5" />
+            <span>Trees</span>
           </button>
           <button
             onClick={() => {

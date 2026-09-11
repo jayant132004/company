@@ -9,7 +9,7 @@ import {
   BrainCircuit, ArrowRight, Lock, SlidersHorizontal, Sparkles, 
   Code, ChevronRight, ArrowUpRight, CheckCircle2, HelpCircle, 
   Info, Terminal, BookOpen, Loader2, Play, RotateCcw, Activity,
-  ArrowUpDown, ArrowUp, ArrowDown, Layers, X, GraduationCap, Search
+  ArrowUpDown, ArrowUp, ArrowDown, Layers, X, GraduationCap, Search, GitFork
 } from "lucide-react";
 import UserDropdown from "../../components/auth/UserDropdown";
 import ShareButton from "../../components/ui/ShareButton";
@@ -452,15 +452,16 @@ export default function DashboardPage() {
                 Live
               </span>
             </Link>
-            <button
-              onClick={() => showLockedFeedback("Trees")}
-              className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+            <Link
+              href="/treementor"
+              className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 transition-colors font-semibold"
             >
+              <GitFork className="h-4 w-4" />
               <span>Trees</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-gray-400 font-mono flex items-center gap-1">
-                <Lock className="h-2.5 w-2.5 text-gray-500" /> Soon
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono">
+                Live
               </span>
-            </button>
+            </Link>
             <button
               onClick={() => showLockedFeedback("Graphs")}
               className="text-gray-500 hover:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1140,8 +1141,8 @@ export default function DashboardPage() {
             {[
               { stage: "Live", title: "Sorting Algorithms", desc: "Interactive visualization, AI explanations, algorithm comparison, and custom datasets.", active: true, link: "/sortmentor" },
               { stage: "Live", title: "Searching Algorithms", desc: "Explore Binary Search, Jump Search, Interpolation Search, Exponential Search, and Two Pointers.", active: true, link: "/searchmentor" },
-              { stage: "Coming Soon", title: "Trees & Graphs", desc: "Binary Search Trees, AVL balance, Graph DFS/BFS traversals, Dijkstra routing.", active: false },
-              { stage: "Future", title: "Advanced Modules", desc: "Dynamic Programming, Greedy algorithms, Backtracking, Operating Systems.", active: false }
+              { stage: "Live", title: "Trees & Hierarchies", desc: "BST, AVL Rotations, Red-Black Double-Black Cases, Prefix Trie, Segment & Fenwick Trees.", active: true, link: "/treementor" },
+              { stage: "Future", title: "Advanced Modules", desc: "Dynamic Programming, Greedy algorithms, Backtracking, Graph traversals.", active: false }
             ].map((r, idx) => (
               <div key={idx} className="p-5 rounded-xl bg-slate-900/40 border border-white/5 flex flex-col justify-between gap-3 relative z-10">
                 <div className="flex flex-col gap-2">
