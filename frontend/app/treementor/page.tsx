@@ -706,6 +706,7 @@ export default function TreeMentorPage() {
           id: string;
           left: RBNode | null = null;
           right: RBNode | null = null;
+          parent: RBNode | null = null;
           x = 0;
           y = 0;
           constructor(v: number, color: "RED" | "BLACK", id: string) {
@@ -715,42 +716,255 @@ export default function TreeMentorPage() {
           }
         }
 
-        let root: RBNode | null = null;
-        for (let idx = 0; idx < activeHist.length; idx++) {
-          const item = activeHist[idx];
-          if (item.op === "insert" && item.value !== undefined) {
-            idCounter++;
-            const color: "RED" | "BLACK" = idx === 0 ? "BLACK" : idx % 2 === 1 ? "RED" : "BLACK";
-            const n = new RBNode(item.value, color, `rb-${idCounter}`);
-            if (!root) {
-              root = n;
-            } else {
-              let curr: RBNode | null = root;
-              while (curr) {
-                if (item.value < curr.val) {
-                  if (!curr.left) {
-                    curr.left = n;
-                    break;
+        const NIL = new RBNode(0, "BLACK", "NIL");
+        let root: RBNode = NIL;
+
+        const leftRotate = (x: RBNode) => {
+          const y = x.right!;
+          x.right = y.left;
+          if (y.left !== NIL && y.left) y.left.parent = x;
+          y.parent = x.parent;
+          if (!x.parent || x.parent === NIL) root = y;
+          else if (x === x.parent.left) x.parent.left = y;
+          else x.parent.right = y;
+          y.left = x;
+          x.parent = y;
+        };
+
+        const rightRotate = (y: RBNode) => {
+          const x = y.left!;
+          y.left = x.right;
+          if (x.right !== NIL && x.right) x.right.parent = y;
+          x.parent = y.parent;
+          if (!y.parent || y.parent === NIL) root = x;
+          else if (y === y.parent.right) y.parent.right = x;
+          else y.parent.left = x;
+          x.right = y;
+          y.parent = x;
+        };
+
+        const insertFixup = (z: RBNode) => {
+          while (z.parent && z.parent.color === "RED") {
+            if (z.parent.parent && z.parent === z.parent.parent.left) {
+              const y = z.parent.parent.right;
+              if (y && y.color === "RED") {
+                z.parent.color = "BLACK";
+                y.color = "BLACK";
+                z.parent.parent.color = "RED";
+                z = z.parent.parent;
+              } else {
+                if (z === z.parent.right) {
+                  z = z.parent;
+                  leftRotate(z);
+                }
+                if (z.parent) {
+                  z.parent.color = "BLACK";
+                  if (z.parent.parent) {
+                    z.parent.parent.color = "RED";
+                    rightRotate(z.parent.parent);
                   }
-                  curr = curr.left;
-                } else if (item.value > curr.val) {
-                  if (!curr.right) {
-                    curr.right = n;
-                    break;
+                }
+              }
+            } else if (z.parent.parent) {
+              const y = z.parent.parent.left;
+              if (y && y.color === "RED") {
+                z.parent.color = "BLACK";
+                y.color = "BLACK";
+                z.parent.parent.color = "RED";
+                z = z.parent.parent;
+              } else {
+                if (z === z.parent.left) {
+                  z = z.parent;
+                  rightRotate(z);
+                }
+                if (z.parent) {
+                  z.parent.color = "BLACK";
+                  if (z.parent.parent) {
+                    z.parent.parent.color = "RED";
+                    leftRotate(z.parent.parent);
                   }
-                  curr = curr.right;
-                } else {
-                  break;
                 }
               }
             }
+            if (z === root) break;
           }
+          root.color = "BLACK";
+        };
+
+        const insertRB = (val: number) => {
+          idCounter++;
+          const z = new RBNode(val, "RED", `rb-${idCounter}`);
+          z.left = NIL;
+          z.right = NIL;
+
+          let y: RBNode = NIL;
+          let x: RBNode = root;
+
+          while (x !== NIL && x) {
+            y = x;
+            if (z.val < x.val) x = x.left!;
+            else if (z.val > x.val) x = x.right!;
+            else return;
+          }
+
+          z.parent = y;
+          if (y === NIL) root = z;
+          else if (z.val < y.val) y.left = z;
+          else y.right = z;
+
+          insertFixup(z);
+        };
+
+        const transplant = (u: RBNode, v: RBNode) => {
+          if (!u.parent || u.parent === NIL) root = v;
+          else if (u === u.parent.left) u.parent.left = v;
+          else u.parent.right = v;
+          if (v) v.parent = u.parent;
+        };
+
+        const treeMinimum = (node: RBNode): RBNode => {
+          while (node.left !== NIL && node.left) node = node.left;
+          return node;
+        };
+
+        const searchRB = (val: number): RBNode => {
+          let curr = root;
+          while (curr !== NIL && curr && curr.val !== val) {
+            if (val < curr.val) curr = curr.left!;
+            else curr = curr.right!;
+          }
+          return curr;
+        };
+
+        const deleteFixup = (x: RBNode) => {
+          while (x !== root && x && x.color === "BLACK") {
+            if (x.parent && x === x.parent.left) {
+              let w = x.parent.right;
+              if (w && w.color === "RED") {
+                w.color = "BLACK";
+                if (x.parent) x.parent.color = "RED";
+                if (x.parent) leftRotate(x.parent);
+                w = x.parent ? x.parent.right : null;
+              }
+              if (w && (!w.left || w.left.color === "BLACK") && (!w.right || w.right.color === "BLACK")) {
+                w.color = "RED";
+                x = x.parent || NIL;
+              } else if (w) {
+                if (!w.right || w.right.color === "BLACK") {
+                  if (w.left) w.left.color = "BLACK";
+                  w.color = "RED";
+                  rightRotate(w);
+                  w = x.parent ? x.parent.right : null;
+                }
+                if (w && x.parent) {
+                  w.color = x.parent.color;
+                  x.parent.color = "BLACK";
+                  if (w.right) w.right.color = "BLACK";
+                  leftRotate(x.parent);
+                }
+                x = root;
+              } else {
+                break;
+              }
+            } else if (x.parent) {
+              let w = x.parent.left;
+              if (w && w.color === "RED") {
+                w.color = "BLACK";
+                if (x.parent) x.parent.color = "RED";
+                if (x.parent) rightRotate(x.parent);
+                w = x.parent ? x.parent.left : null;
+              }
+              if (w && (!w.right || w.right.color === "BLACK") && (!w.left || w.left.color === "BLACK")) {
+                w.color = "RED";
+                x = x.parent || NIL;
+              } else if (w) {
+                if (!w.left || w.left.color === "BLACK") {
+                  if (w.right) w.right.color = "BLACK";
+                  w.color = "RED";
+                  leftRotate(w);
+                  w = x.parent ? x.parent.left : null;
+                }
+                if (w && x.parent) {
+                  w.color = x.parent.color;
+                  x.parent.color = "BLACK";
+                  if (w.left) w.left.color = "BLACK";
+                  rightRotate(x.parent);
+                }
+                x = root;
+              } else {
+                break;
+              }
+            } else {
+              break;
+            }
+          }
+          if (x && x !== NIL) x.color = "BLACK";
+        };
+
+        const deleteRB = (val: number) => {
+          const z = searchRB(val);
+          if (z === NIL || !z) return;
+
+          let y = z;
+          let yOrigColor = y.color;
+          let x: RBNode;
+
+          if (z.left === NIL || !z.left) {
+            x = z.right || NIL;
+            transplant(z, z.right || NIL);
+          } else if (z.right === NIL || !z.right) {
+            x = z.left || NIL;
+            transplant(z, z.left || NIL);
+          } else {
+            y = treeMinimum(z.right);
+            yOrigColor = y.color;
+            x = y.right || NIL;
+            if (y.parent === z) {
+              if (x) x.parent = y;
+            } else {
+              transplant(y, y.right || NIL);
+              y.right = z.right;
+              if (y.right) y.right.parent = y;
+            }
+            transplant(z, y);
+            y.left = z.left;
+            if (y.left) y.left.parent = y;
+            y.color = z.color;
+          }
+
+          if (yOrigColor === "BLACK") {
+            deleteFixup(x);
+          }
+        };
+
+        const layoutRB = (node: RBNode | null, depth = 0, left = 0, right = 800): TreeNodeLayout[] => {
+          if (!node || node === NIL) return [];
+          const mid = (left + right) / 2;
+          const res: TreeNodeLayout[] = [
+            {
+              id: node.id,
+              val: node.val,
+              color: node.color,
+              x: mid,
+              y: 50 + depth * 70,
+              left_id: node.left && node.left !== NIL ? node.left.id : null,
+              right_id: node.right && node.right !== NIL ? node.right.id : null,
+            },
+          ];
+          if (node.left && node.left !== NIL) res.push(...layoutRB(node.left, depth + 1, left, mid));
+          if (node.right && node.right !== NIL) res.push(...layoutRB(node.right, depth + 1, mid, right));
+          return res;
+        };
+
+        for (const item of activeHist) {
+          if (item.op === "insert" && item.value !== undefined) insertRB(item.value);
+          else if (item.op === "delete" && item.value !== undefined) deleteRB(item.value);
         }
 
-        let nodes = computeClientTreeLayout(root);
+        let nodes = layoutRB(root);
         let edges = getClientTreeEdges(nodes);
 
-        if (!root) {
+        if (root === NIL) {
           stepList.push({
             step: 0,
             event_type: "init",
@@ -771,42 +985,82 @@ export default function TreeMentorPage() {
         }
 
         if (op === "insert" && val !== undefined) {
-          idCounter++;
-          const color: "RED" | "BLACK" = !root ? "BLACK" : "RED";
-          const n = new RBNode(val, color, `rb-${idCounter}`);
-          if (!root) {
-            root = n;
-          } else {
-            let curr: RBNode | null = root;
-            while (curr) {
-              if (val < curr.val) {
-                if (!curr.left) {
-                  curr.left = n;
-                  break;
-                }
-                curr = curr.left;
-              } else if (val > curr.val) {
-                if (!curr.right) {
-                  curr.right = n;
-                  break;
-                }
-                curr = curr.right;
-              } else {
-                break;
-              }
-            }
-          }
-          nodes = computeClientTreeLayout(root);
+          insertRB(val);
+          nodes = layoutRB(root);
           edges = getClientTreeEdges(nodes);
           stepList.push({
             step: stepList.length,
             event_type: "inserted",
             nodes: JSON.parse(JSON.stringify(nodes)),
             edges: JSON.parse(JSON.stringify(edges)),
-            active_node_id: n.id,
+            active_node_id: root !== NIL ? root.id : null,
             message: `🎯 Node ${val} inserted into Red-Black Tree.`,
           });
           addOperation({ op: "insert", value: val });
+        } else if (op === "delete" && val !== undefined) {
+          if (root === NIL) {
+            stepList.push({
+              step: stepList.length,
+              event_type: "not_found",
+              nodes: [],
+              edges: [],
+              active_node_id: null,
+              message: `Tree is empty. Cannot delete ${val}.`,
+            });
+          } else {
+            deleteRB(val);
+            nodes = layoutRB(root);
+            edges = getClientTreeEdges(nodes);
+            stepList.push({
+              step: stepList.length,
+              event_type: "deleted",
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(edges)),
+              active_node_id: root !== NIL ? root.id : null,
+              message: `✓ Node ${val} deleted from Red-Black Tree and black-height parity restored.`,
+            });
+            addOperation({ op: "delete", value: val });
+          }
+        } else if (op === "search" && val !== undefined) {
+          let curr: RBNode = root;
+          let found = false;
+          while (curr !== NIL && curr) {
+            const isRoot = curr === root;
+            stepList.push({
+              step: stepList.length,
+              event_type: "probe",
+              nodes: JSON.parse(JSON.stringify(layoutRB(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(layoutRB(root)))),
+              active_node_id: curr.id,
+              message: `${isRoot ? "🌲 Starting search at Root node " : "Probing node "}${curr.val} (${curr.color}): comparing with target ${val}.`,
+            });
+            if (val === curr.val) {
+              found = true;
+              stepList.push({
+                step: stepList.length,
+                event_type: "found",
+                nodes: JSON.parse(JSON.stringify(layoutRB(root))),
+                edges: JSON.parse(JSON.stringify(getClientTreeEdges(layoutRB(root)))),
+                active_node_id: curr.id,
+                message: `🎯 Found target ${val} in Red-Black Tree!`,
+              });
+              break;
+            } else if (val < curr.val) {
+              curr = curr.left || NIL;
+            } else {
+              curr = curr.right || NIL;
+            }
+          }
+          if (!found) {
+            stepList.push({
+              step: stepList.length,
+              event_type: "not_found",
+              nodes: JSON.parse(JSON.stringify(layoutRB(root))),
+              edges: JSON.parse(JSON.stringify(getClientTreeEdges(layoutRB(root)))),
+              active_node_id: null,
+              message: `❌ Target ${val} is not present in the Red-Black Tree.`,
+            });
+          }
         }
 
         setSteps(stepList);
