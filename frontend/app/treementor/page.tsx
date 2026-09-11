@@ -1527,7 +1527,7 @@ export default function TreeMentorPage() {
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>Insert</span>
+                  <span>{currentNodes.length === 0 ? "Set Root" : "Insert"}</span>
                 </button>
                 <button
                   onClick={handleDelete}
@@ -1792,28 +1792,83 @@ export default function TreeMentorPage() {
                 })}
               </svg>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 gap-3">
+              <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 gap-4">
                 <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
                   <GitFork className="h-8 w-8 stroke-[1.5]" />
                 </div>
                 <div className="flex flex-col gap-1 max-w-md">
-                  <h3 className="text-base font-bold text-white">Empty {activeMeta.name}</h3>
+                  <h3 className="text-base font-bold text-white">Empty {activeMeta.name} (root = null)</h3>
                   <p className="text-xs text-gray-400 leading-relaxed font-mono">
-                    Root is currently <span className="text-emerald-400 font-semibold">null</span>. Enter a value in the toolbar above and click <span className="text-emerald-300 font-bold">Insert</span> to build your custom tree step-by-step.
+                    Enter <span className="text-emerald-300 font-semibold">any custom value</span> below or in the toolbar to create the root node and start building.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[11px] font-mono text-gray-500">Quick Start:</span>
-                  <button
-                    onClick={() => {
-                      setInputValue("10");
-                      executeOperation("insert", 10);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold transition-all cursor-pointer"
-                  >
-                    + Insert 10 as Root
-                  </button>
+
+                {/* Interactive Direct Root Creator */}
+                <div className="flex items-center gap-2 p-1.5 sm:p-2 rounded-2xl bg-slate-900/90 border border-emerald-500/40 shadow-xl shadow-emerald-950/40">
+                  <span className="text-xs font-mono font-bold text-emerald-400 pl-2">Root Value:</span>
+                  {treeType === "trie" ? (
+                    <>
+                      <input
+                        type="text"
+                        value={inputWord}
+                        onChange={(e) => setInputWord(e.target.value.toLowerCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleInsert();
+                        }}
+                        placeholder="e.g. root"
+                        className="w-32 px-3 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-white font-mono font-bold text-sm focus:outline-none focus:border-emerald-500"
+                      />
+                      <button
+                        onClick={handleInsert}
+                        disabled={isLoading || !inputWord.trim()}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Set Root Word</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleInsert();
+                        }}
+                        placeholder="e.g. 50"
+                        className="w-24 px-3 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-white font-mono font-bold text-sm focus:outline-none focus:border-emerald-500"
+                      />
+                      <button
+                        onClick={handleInsert}
+                        disabled={isLoading || !inputValue}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Set Root Node</span>
+                      </button>
+                    </>
+                  )}
                 </div>
+
+                {/* Quick Suggested Root Values */}
+                {treeType !== "trie" && treeType !== "segment" && treeType !== "fenwick" && (
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-gray-500 flex-wrap justify-center">
+                    <span>Quick presets:</span>
+                    {[50, 42, 25, 10, -5].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => {
+                          setInputValue(val.toString());
+                          executeOperation("insert", val);
+                        }}
+                        className="px-2.5 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-gray-300 hover:text-emerald-300 border border-white/10 hover:border-emerald-500/30 transition-all cursor-pointer"
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
